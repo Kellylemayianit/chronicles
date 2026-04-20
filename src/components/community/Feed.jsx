@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import useGamification from '../../hooks/useGamification';
+import IslandHeader from './IslandHeader';
 
 const SAMPLE_POSTS = [
   {
@@ -52,8 +53,8 @@ function PostCard({ post }) {
   const { rank } = useGamification(post.authorXP);
 
   const ISLAND_COLORS = {
-    Sports: '#ea580c',
-    Beauty: '#a855f7',
+    Sports:    '#ea580c',
+    Beauty:    '#a855f7',
     Education: '#3b82f6',
   };
 
@@ -68,13 +69,14 @@ function PostCard({ post }) {
   };
 
   return (
-    <article style={{
-      padding: '18px 20px',
-      borderBottom: '1px solid var(--border)',
-      display: 'flex',
-      gap: 13,
-      transition: 'background 0.15s',
-    }}
+    <article
+      style={{
+        padding: '18px 20px',
+        borderBottom: '1px solid var(--border)',
+        display: 'flex',
+        gap: 13,
+        transition: 'background 0.15s',
+      }}
       onMouseEnter={e => e.currentTarget.style.background = 'var(--hover-bg)'}
       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
     >
@@ -83,8 +85,7 @@ function PostCard({ post }) {
         width: 42, height: 42, borderRadius: '50%',
         background: post.avatarGrad,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 16, fontWeight: 800, color: '#fff',
-        flexShrink: 0,
+        fontSize: 16, fontWeight: 800, color: '#fff', flexShrink: 0,
         boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
       }}>
         {post.avatar}
@@ -92,7 +93,7 @@ function PostCard({ post }) {
 
       {/* Content */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        {/* Header */}
+        {/* Header row */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, flexWrap: 'wrap' }}>
           <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>{post.author}</span>
           <span style={{
@@ -125,21 +126,9 @@ function PostCard({ post }) {
         {/* Actions */}
         <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
           {[
-            {
-              icon: '💬', count: post.comments,
-              active: false, color: '#3b82f6',
-              onClick: () => {},
-            },
-            {
-              icon: reposted ? '🔁' : '↩️', count: repostCount,
-              active: reposted, color: '#22c55e',
-              onClick: handleRepost,
-            },
-            {
-              icon: liked ? '❤️' : '🤍', count: likeCount,
-              active: liked, color: '#ef4444',
-              onClick: handleLike,
-            },
+            { icon: '💬', count: post.comments, active: false, color: '#3b82f6', onClick: () => {} },
+            { icon: reposted ? '🔁' : '↩️', count: repostCount, active: reposted, color: '#22c55e', onClick: handleRepost },
+            { icon: liked ? '❤️' : '🤍',    count: likeCount,   active: liked,    color: '#ef4444', onClick: handleLike },
           ].map((action, i) => (
             <button
               key={i}
@@ -172,29 +161,39 @@ function PostCard({ post }) {
   );
 }
 
-export default function Feed({ island = 'All' }) {
+// ─── Feed ─────────────────────────────────────────────────────────────────────
+export default function Feed({ activeIsland = 'All' }) {
   const [composing, setComposing] = useState(false);
   const [draft, setDraft] = useState('');
 
-  const filtered = island === 'All'
+  const filtered = activeIsland === 'All'
     ? SAMPLE_POSTS
-    : SAMPLE_POSTS.filter(p => p.island === island);
+    : SAMPLE_POSTS.filter(p => p.island === activeIsland);
 
   return (
     <div style={{ flex: 1, maxWidth: 620 }}>
-      {/* Compose box */}
+
+      {/* ── Island Header banner ── */}
+      {activeIsland && activeIsland !== 'All' && (
+        <IslandHeader island={activeIsland} />
+      )}
+
+      {/* ── Compose box ── */}
       <div style={{
         padding: '16px 20px',
         borderBottom: '1px solid var(--border)',
         display: 'flex', gap: 12,
         background: 'var(--card-bg)',
+        borderRadius: activeIsland === 'All' ? '12px 12px 0 0' : '0',
       }}>
         <div style={{
           width: 40, height: 40, borderRadius: '50%',
           background: 'linear-gradient(135deg, var(--accent), var(--accent-2))',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 14, fontWeight: 800, color: '#fff', flexShrink: 0,
-        }}>K</div>
+        }}>
+          K
+        </div>
         <div style={{ flex: 1 }}>
           <textarea
             placeholder="Share something with the community…"
@@ -206,8 +205,7 @@ export default function Feed({ island = 'All' }) {
               outline: 'none', resize: 'none', fontSize: '0.9rem',
               color: 'var(--text-primary)', minHeight: composing ? 80 : 38,
               transition: 'min-height 0.2s ease',
-              fontFamily: 'var(--font-body)',
-              lineHeight: 1.5,
+              fontFamily: 'var(--font-body)', lineHeight: 1.5,
             }}
           />
           {composing && (
@@ -227,8 +225,7 @@ export default function Feed({ island = 'All' }) {
                 style={{
                   padding: '6px 18px', borderRadius: 20, border: 'none',
                   background: 'linear-gradient(135deg, var(--accent), var(--accent-2))',
-                  cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700,
-                  color: '#fff',
+                  cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700, color: '#fff',
                 }}
               >
                 Post
@@ -238,8 +235,23 @@ export default function Feed({ island = 'All' }) {
         </div>
       </div>
 
-      {/* Posts */}
-      {filtered.map(post => <PostCard key={post.id} post={post} />)}
+      {/* ── Posts ── */}
+      <div style={{
+        background: 'var(--card-bg)',
+        borderRadius: '0 0 12px 12px',
+        border: '1px solid var(--border)',
+        borderTop: 'none',
+        overflow: 'hidden',
+      }}>
+        {filtered.length > 0
+          ? filtered.map(post => <PostCard key={post.id} post={post} />)
+          : (
+            <div style={{ padding: '40px 24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.88rem' }}>
+              No posts in this island yet. Be the first to share! 🌱
+            </div>
+          )
+        }
+      </div>
     </div>
   );
 }

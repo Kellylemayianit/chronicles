@@ -1,348 +1,189 @@
-import { useEffect } from 'react';
+import { useState } from 'react';
+import { Search, ChevronDown, Menu } from 'lucide-react';
 import useStore from './store/useStore';
 import useGamification from './hooks/useGamification';
 import Sidebar from './components/layout/Sidebar';
 import GigCard from './components/marketplace/GigCard';
+import ServiceDetails from './components/marketplace/ServiceDetails';
 import Feed from './components/community/Feed';
+import GlobalSearch from './components/layout/GlobalSearch';
+import ProfileDrawer from './components/layout/ProfileDrawer';
 
-// ─── CSS-in-JS Theme injection ───────────────────────────────────────────────
-const THEME_CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=DM+Sans:wght@400;500;600;700&display=swap');
+// import './styles/index.css';  ← uncomment in your Vite/CRA entry point
 
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  :root {
-    --font-display: 'Playfair Display', serif;
-    --font-body: 'DM Sans', sans-serif;
-
-    --bg:              #0e1812;
-    --sidebar-bg:      #0a1410;
-    --sidebar-footer-bg: #091210;
-    --card-bg:         #111f17;
-    --hover-bg:        rgba(255,255,255,0.04);
-    --active-bg:       rgba(82,183,136,0.12);
-    --island-active-bg: rgba(245,158,11,0.1);
-    --border:          rgba(255,255,255,0.07);
-
-    --accent:          #52b788;
-    --accent-2:        #f59e0b;
-    --glow:            rgba(82,183,136,0.3);
-
-    --text-primary:    #e8f0eb;
-    --text-secondary:  #a3b899;
-    --text-muted:      #5a7260;
-  }
-
-  html, body, #root {
-    height: 100%;
-    background: var(--bg);
-    color: var(--text-primary);
-    font-family: var(--font-body);
-  }
-
-  ::-webkit-scrollbar { width: 6px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
-
-  @keyframes fadeSlideIn {
-    from { opacity: 0; transform: translateY(8px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-  .animate-in { animation: fadeSlideIn 0.3s ease forwards; }
-`;
-
-// ─── Gig data ─────────────────────────────────────────────────────────────────
-const GIGS = [
-  {
-    id: 1,
-    title: 'I will design a stunning brand identity for your business',
-    price: 65,
-    sellerName: 'Aisha N.',
-    sellerXP: 1800,
-    island: 'Beauty',
-    rating: 4.9,
-    reviewCount: 127,
-    imageBg: 'linear-gradient(135deg, #4a1942 0%, #a855f7 100%)',
-    deliveryDays: 4,
+// ─── Context-aware filter config ──────────────────────────────────────────────
+const FILTER_CONFIG = {
+  FreelancerGigs: {
+    categories: ['All Services', 'Design', 'Dev', 'Writing', 'Marketing', 'Video'],
+    prices:     ['All Prices', 'Under $20', '$20–$50', '$50–$100', '$100+'],
   },
-  {
-    id: 2,
-    title: 'Professional football coaching for youth teams & academies',
-    price: 35,
-    sellerName: 'Omondi K.',
-    sellerXP: 720,
-    island: 'Sports',
-    rating: 4.7,
-    reviewCount: 53,
-    imageBg: 'linear-gradient(135deg, #7c2d12 0%, #ea580c 100%)',
-    deliveryDays: 1,
+  BusinessGigs: {
+    categories: ['All Agency', 'Consultancy', 'Retail', 'Wellness'],
+    prices:     ['All Prices', 'Under $100', '$100–$500', '$500+'],
   },
-  {
-    id: 3,
-    title: 'Full KCSE Mathematics crash course with exam prep materials',
-    price: 45,
-    sellerName: 'Wanjiku M.',
-    sellerXP: 3200,
-    island: 'Education',
-    rating: 5.0,
-    reviewCount: 214,
-    imageBg: 'linear-gradient(135deg, #1e3a5f 0%, #3b82f6 100%)',
-    deliveryDays: 7,
+  ProCommunities: {
+    categories: ['All Pro', 'Sports Pro', 'Beauty Pro', 'Education Pro'],
+    prices:     ['All Tiers', 'Monthly', 'Annual', 'Lifetime'],
   },
-  {
-    id: 4,
-    title: 'Natural locs installation, retwisting & loc journey consultation',
-    price: 55,
-    sellerName: 'Amina S.',
-    sellerXP: 5500,
-    island: 'Beauty',
-    rating: 4.9,
-    reviewCount: 98,
-    imageBg: 'linear-gradient(135deg, #701a75 0%, #ec4899 100%)',
-    deliveryDays: 2,
+  OpenGroves: {
+    categories: ['All Topics', 'Sports', 'Beauty', 'Education'],
+    prices:     ['Free Access'],
   },
-  {
-    id: 5,
-    title: 'Personal fitness & nutrition plan tailored for Kenyan lifestyle',
-    price: 28,
-    sellerName: 'Brian O.',
-    sellerXP: 450,
-    island: 'Sports',
-    rating: 4.6,
-    reviewCount: 31,
-    imageBg: 'linear-gradient(135deg, #14532d 0%, #52b788 100%)',
-    deliveryDays: 3,
-  },
-  {
-    id: 6,
-    title: 'IELTS & English proficiency coaching — target band 7+',
-    price: 60,
-    sellerName: 'Njeri W.',
-    sellerXP: 2100,
-    island: 'Education',
-    rating: 4.8,
-    reviewCount: 72,
-    imageBg: 'linear-gradient(135deg, #0c4a6e 0%, #38bdf8 100%)',
-    deliveryDays: 14,
-  },
-];
+};
 
-// ─── Rank Progress Bar ─────────────────────────────────────────────────────────
-function RankWidget() {
-  const { rank, nextRank, progress, xp } = useGamification(240);
+// ─── Dropdown helper ──────────────────────────────────────────────────────────
+function FilterSelect({ value, options, onChange, disabled }) {
+  return (
+    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        disabled={disabled}
+        style={{
+          appearance: 'none', background: 'rgba(255,255,255,0.05)',
+          border: '1px solid var(--border)', borderRadius: 8,
+          color: disabled ? 'var(--text-muted)' : 'var(--text-secondary)',
+          fontSize: '0.78rem', fontWeight: 500,
+          padding: '5px 28px 5px 10px',
+          cursor: disabled ? 'not-allowed' : 'pointer',
+          fontFamily: 'var(--font-body)', outline: 'none',
+        }}
+      >
+        {options.map(o => <option key={o} value={o} style={{ background: '#0e1812' }}>{o}</option>)}
+      </select>
+      <ChevronDown size={11} style={{ position: 'absolute', right: 8, pointerEvents: 'none', color: 'var(--text-muted)' }} />
+    </div>
+  );
+}
+
+// ─── XP / Rank mini-widget ────────────────────────────────────────────────────
+function UserStatusWidget() {
+  const { rank, progress, xp } = useGamification(240);
   return (
     <div style={{
-      background: 'var(--card-bg)', border: '1px solid var(--border)',
-      borderRadius: 14, padding: '16px 18px', marginBottom: 20,
+      display: 'flex', alignItems: 'center', gap: 10,
+      background: 'rgba(255,255,255,0.04)',
+      border: '1px solid var(--border)',
+      borderRadius: 20, padding: '5px 12px 5px 8px',
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-        <span style={{ fontSize: 22 }}>{rank.icon}</span>
-        <div>
-          <div style={{ fontSize: '0.85rem', fontWeight: 700, color: rank.color }}>{rank.name}</div>
-          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{xp} XP</div>
+      <span style={{ fontSize: 16 }}>{rank.icon}</span>
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: rank.color }}>{rank.name}</span>
+          <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{xp} XP</span>
         </div>
-        {nextRank && (
-          <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Next: {nextRank.name}</div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{nextRank.minXP - xp} XP away</div>
-          </div>
-        )}
-      </div>
-      <div style={{ height: 7, background: 'rgba(255,255,255,0.08)', borderRadius: 10, overflow: 'hidden' }}>
-        <div style={{
-          height: '100%', borderRadius: 10,
-          width: `${progress}%`,
-          background: `linear-gradient(90deg, ${rank.color}, var(--accent-2))`,
-          transition: 'width 0.6s cubic-bezier(0.4,0,0.2,1)',
-        }} />
+        <div style={{ width: 72, height: 3, background: 'rgba(255,255,255,0.08)', borderRadius: 6, overflow: 'hidden', marginTop: 3 }}>
+          <div style={{ height: '100%', borderRadius: 6, width: `${progress}%`, background: `linear-gradient(90deg, ${rank.color}, var(--accent-2))`, transition: 'width 0.6s ease' }} />
+        </div>
       </div>
     </div>
   );
 }
 
-// ─── Marketplace Layout ────────────────────────────────────────────────────────
-function MarketplaceLayout({ activeIsland }) {
-  const filtered = activeIsland === 'All'
-    ? GIGS
-    : GIGS.filter(g => g.island === activeIsland);
+// ─── Chronicles Header ────────────────────────────────────────────────────────
+function ChroniclesHeader({ onMenuToggle }) {
+  const {
+    activeDomain, activeMarketSection, activeIslandGroup,
+    activeIsland, activeCategory, setActiveCategory,
+    activePriceRange, setActivePriceRange,
+    toggleSearch,
+  } = useStore();
+
+  const contextKey = activeDomain === 'Marketplace' ? activeMarketSection : activeIslandGroup;
+  const filters    = FILTER_CONFIG[contextKey] || FILTER_CONFIG.FreelancerGigs;
+
+  const sectionLabel = activeDomain === 'Marketplace'
+    ? (activeMarketSection === 'FreelancerGigs' ? 'Freelancer Gigs' : 'Business Gigs')
+    : (activeIslandGroup === 'ProCommunities' ? `Pro · ${activeIsland}` : `Groves · ${activeIsland}`);
 
   return (
-    <div style={{ flex: 1, padding: '28px 32px', overflowY: 'auto', maxHeight: '100vh' }}>
-      <div className="animate-in">
-        {/* Header */}
-        <div style={{ marginBottom: 24 }}>
-          <h1 style={{
-            fontFamily: 'var(--font-display)', fontSize: '1.9rem',
-            fontWeight: 800, color: 'var(--text-primary)', marginBottom: 4,
-          }}>
-            {activeIsland} Marketplace
-          </h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>
-            {filtered.length} services available in your island
-          </p>
-        </div>
+    <header className="chronicles-header">
+      {/* Hamburger — visible on mobile only */}
+      <button className="hamburger-btn" onClick={onMenuToggle} aria-label="Open menu">
+        <Menu size={18} />
+      </button>
 
-        {/* Rank widget */}
-        <RankWidget />
-
-        {/* Gig grid */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
-          gap: 18,
-        }}>
-          {filtered.map(gig => <GigCard key={gig.id} {...gig} />)}
-        </div>
+      {/* Search bar — clicking opens GlobalSearch overlay */}
+      <div className="header-search" onClick={toggleSearch} role="button" tabIndex={0} onKeyDown={e => e.key === 'Enter' && toggleSearch()}>
+        <Search size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+        <input
+          readOnly
+          placeholder={`Search ${sectionLabel}...`}
+          style={{ cursor: 'pointer', pointerEvents: 'none' }}
+          tabIndex={-1}
+        />
       </div>
-    </div>
+
+      <div className="header-filters">
+        <FilterSelect value={activeCategory} options={filters.categories} onChange={setActiveCategory} />
+        <FilterSelect value={activePriceRange} options={filters.prices} onChange={setActivePriceRange} disabled={filters.prices.length <= 1} />
+      </div>
+
+      <div className="header-badge">
+        {activeDomain === 'Marketplace' ? '🛍️' : '🌿'} {sectionLabel}
+      </div>
+
+      <div className="header-right">
+        <UserStatusWidget />
+      </div>
+    </header>
   );
 }
 
-// ─── Community Layout ──────────────────────────────────────────────────────────
-function CommunityLayout({ activeIsland }) {
-  return (
-    <div style={{ flex: 1, display: 'flex', overflowY: 'auto', maxHeight: '100vh' }}>
-      <div style={{ flex: 1, borderRight: '1px solid var(--border)' }}>
-        {/* Feed header */}
-        <div style={{
-          padding: '16px 20px', borderBottom: '1px solid var(--border)',
-          position: 'sticky', top: 0, zIndex: 10,
-          background: 'rgba(14,24,18,0.85)', backdropFilter: 'blur(12px)',
-        }}>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', fontWeight: 700 }}>
-            {activeIsland} Feed
-          </h2>
-        </div>
-        <Feed island={activeIsland} />
-      </div>
-
-      {/* Right sidebar */}
-      <aside style={{ width: 280, padding: '20px 18px', flexShrink: 0 }}>
-        <div style={{
-          background: 'var(--card-bg)', border: '1px solid var(--border)',
-          borderRadius: 14, padding: '16px', marginBottom: 16,
-        }}>
-          <h3 style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: 12, color: 'var(--text-primary)' }}>
-            🏆 Top Growers
-          </h3>
-          {[
-            { name: 'Amina S.', xp: 5500 },
-            { name: 'Wanjiku M.', xp: 3200 },
-            { name: 'Omondi K.', xp: 720 },
-          ].map((u, i) => {
-            const { rank } = useGamification(u.xp);
-            return (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', width: 16 }}>#{i + 1}</span>
-                <div style={{
-                  width: 28, height: 28, borderRadius: '50%',
-                  background: 'linear-gradient(135deg, var(--accent), var(--accent-2))',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 11, fontWeight: 800, color: '#fff',
-                }}>
-                  {u.name[0]}
-                </div>
-                <div>
-                  <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)' }}>{u.name}</div>
-                  <div style={{ fontSize: '0.68rem', color: rank.color }}>{rank.icon} {rank.name}</div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div style={{
-          background: 'var(--card-bg)', border: '1px solid var(--border)',
-          borderRadius: 14, padding: '16px',
-        }}>
-          <h3 style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: 10, color: 'var(--text-primary)' }}>
-            🌿 Your Progress
-          </h3>
-          <RankWidget />
-        </div>
-      </aside>
-    </div>
-  );
-}
-
-// ─── App Root ──────────────────────────────────────────────────────────────────
+// ─── Main App Component ───────────────────────────────────────────────────────
 export default function App() {
-  const { activeMode, activeIsland } = useStore();
+  const { activeDomain, activeIsland, selectedGigId, selectedGig, clearSelectedGig } = useStore();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Inject theme CSS once
-  useEffect(() => {
-    const existing = document.getElementById('kimana-theme');
-    if (!existing) {
-      const style = document.createElement('style');
-      style.id = 'kimana-theme';
-      style.textContent = THEME_CSS;
-      document.head.appendChild(style);
-    }
-  }, []);
+  const closeMobileMenu = () => setIsMobileMenuOpen(false);
+  const toggleMobileMenu = () => setIsMobileMenuOpen(o => !o);
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--bg)' }}>
-      <Sidebar />
+    <div className="app-shell">
+      {/* Mobile sidebar overlay */}
+      <div
+        className={`sidebar-overlay${isMobileMenuOpen ? ' visible' : ''}`}
+        onClick={closeMobileMenu}
+        aria-hidden="true"
+      />
 
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
-        {/* Top bar */}
-        <header style={{
-          padding: '12px 24px',
-          borderBottom: '1px solid var(--border)',
-          display: 'flex', alignItems: 'center', gap: 12,
-          background: 'rgba(14,24,18,0.9)', backdropFilter: 'blur(12px)',
-          flexShrink: 0,
-        }}>
-          <div style={{
-            flex: 1, maxWidth: 360,
-            background: 'rgba(255,255,255,0.05)',
-            border: '1px solid var(--border)',
-            borderRadius: 24, padding: '7px 16px',
-            display: 'flex', alignItems: 'center', gap: 8,
-          }}>
-            <span style={{ color: 'var(--text-muted)', fontSize: 14 }}>🔍</span>
-            <input
-              placeholder={`Search ${activeIsland} ${activeMode}…`}
-              style={{
-                background: 'none', border: 'none', outline: 'none',
-                color: 'var(--text-primary)', fontSize: '0.85rem',
-                width: '100%', fontFamily: 'var(--font-body)',
-              }}
-            />
-          </div>
-          <div style={{
-            marginLeft: 'auto',
-            display: 'flex', alignItems: 'center', gap: 8,
-          }}>
-            <div style={{
-              padding: '6px 14px', borderRadius: 20,
-              background: 'var(--active-bg)',
-              fontSize: '0.78rem', fontWeight: 700,
-              color: 'var(--accent)',
-              border: '1px solid rgba(82,183,136,0.2)',
-            }}>
-              {activeMode === 'Marketplace' ? '🛍️' : '🌿'} {activeMode}
-            </div>
-            <div style={{
-              padding: '6px 14px', borderRadius: 20,
-              background: 'var(--island-active-bg)',
-              fontSize: '0.78rem', fontWeight: 700,
-              color: 'var(--accent-2)',
-              border: '1px solid rgba(245,158,11,0.15)',
-            }}>
-              ⚡ {activeIsland}
-            </div>
-          </div>
-        </header>
+      <Sidebar isMobileOpen={isMobileMenuOpen} onMobileClose={closeMobileMenu} />
 
-        {/* Mode-based content */}
-        <div style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
-          {activeMode === 'Marketplace'
-            ? <MarketplaceLayout key={activeIsland} activeIsland={activeIsland} />
-            : <CommunityLayout key={activeIsland} activeIsland={activeIsland} />
-          }
+      <main className="main-content">
+        <ChroniclesHeader onMenuToggle={toggleMobileMenu} />
+
+        <div className="content-area">
+          {/* ── Transactional Engine ── */}
+          {selectedGigId ? (
+            <div className="service-details-page">
+              <button className="service-details-back" onClick={clearSelectedGig}>
+                ← Back to Gigs
+              </button>
+              <ServiceDetails
+                gig={selectedGig}
+                isOpen={true}
+                onClose={clearSelectedGig}
+                asPage={true}
+              />
+            </div>
+          ) : activeDomain === 'Marketplace' ? (
+            <div className="marketplace-grid">
+              <GigCard id="gig-001" island={activeIsland} emoji="🎨" />
+              <GigCard id="gig-002" title="Local Logistics Hero"          price={15}  rating={5.0} reviewCount={12} island={activeIsland} imageBg="linear-gradient(135deg,#1a3a2a,#2d6a4f)"  emoji="🚚" sellerName="Brian O."   sellerXP={650}  />
+              <GigCard id="gig-003" title="Island Beauty Pack"            price={85}  rating={4.8} reviewCount={44} island={activeIsland} imageBg="linear-gradient(135deg,#2a1a3a,#6a2d6a)"  emoji="✨" sellerName="Wanjiku G." sellerXP={2200} />
+              <GigCard id="gig-004" title="Sports Coaching Session"       price={35}  rating={4.7} reviewCount={89} island="Sports"       imageBg="linear-gradient(135deg,#1a2a3a,#2d4f6a)"  emoji="⚽" sellerName="Otieno K."  sellerXP={3100} deliveryDays={1} />
+              <GigCard id="gig-005" title="Curriculum Design & Tutoring"  price={60}  rating={5.0} reviewCount={23} island="Education"    imageBg="linear-gradient(135deg,#1a2a1a,#3a6a2d)"  emoji="📚" sellerName="Njeri W."   sellerXP={980}  deliveryDays={5} />
+              <GigCard id="gig-006" title="Brand Identity Full Package"   price={120} rating={4.9} reviewCount={61} island={activeIsland} imageBg="linear-gradient(135deg,#3a2a1a,#6a4f2d)"  emoji="🏷️" sellerName="Amina S."  sellerXP={4500} deliveryDays={7} />
+            </div>
+          ) : (
+            <Feed activeIsland={activeIsland} />
+          )}
         </div>
       </main>
+
+      {/* ── Global overlays — mounted outside main to avoid z-index conflicts ── */}
+      <GlobalSearch />
+      <ProfileDrawer />
     </div>
   );
 }

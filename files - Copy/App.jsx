@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, ChevronDown, Menu } from 'lucide-react';
+import { Search, ChevronDown, Star, TrendingUp, Menu } from 'lucide-react';
 import useStore from './store/useStore';
 import useGamification from './hooks/useGamification';
 import Sidebar from './components/layout/Sidebar';
@@ -7,27 +7,27 @@ import GigCard from './components/marketplace/GigCard';
 import ServiceDetails from './components/marketplace/ServiceDetails';
 import Feed from './components/community/Feed';
 import GlobalSearch from './components/layout/GlobalSearch';
-import ProfileDrawer from './components/layout/ProfileDrawer';
 
-// import './styles/index.css';  ← uncomment in your Vite/CRA entry point
+// Import the global stylesheet — in a Vite/CRA project this is all you need
+// import './styles/index.css';
 
 // ─── Context-aware filter config ──────────────────────────────────────────────
 const FILTER_CONFIG = {
   FreelancerGigs: {
     categories: ['All Services', 'Design', 'Dev', 'Writing', 'Marketing', 'Video'],
-    prices:     ['All Prices', 'Under $20', '$20–$50', '$50–$100', '$100+'],
+    prices: ['All Prices', 'Under $20', '$20–$50', '$50–$100', '$100+'],
   },
   BusinessGigs: {
     categories: ['All Agency', 'Consultancy', 'Retail', 'Wellness'],
-    prices:     ['All Prices', 'Under $100', '$100–$500', '$500+'],
+    prices: ['All Prices', 'Under $100', '$100–$500', '$500+'],
   },
   ProCommunities: {
     categories: ['All Pro', 'Sports Pro', 'Beauty Pro', 'Education Pro'],
-    prices:     ['All Tiers', 'Monthly', 'Annual', 'Lifetime'],
+    prices: ['All Tiers', 'Monthly', 'Annual', 'Lifetime'],
   },
   OpenGroves: {
     categories: ['All Topics', 'Sports', 'Beauty', 'Education'],
-    prices:     ['Free Access'],
+    prices: ['Free Access'],
   },
 };
 
@@ -56,7 +56,7 @@ function FilterSelect({ value, options, onChange, disabled }) {
   );
 }
 
-// ─── XP / Rank mini-widget ────────────────────────────────────────────────────
+// ─── XP / Rank mini-widget ─────────────────────────────────────────────────────
 function UserStatusWidget() {
   const { rank, progress, xp } = useGamification(240);
   return (
@@ -81,16 +81,15 @@ function UserStatusWidget() {
 }
 
 // ─── Chronicles Header ────────────────────────────────────────────────────────
-function ChroniclesHeader({ onMenuToggle }) {
+function ChroniclesHeader({ searchQuery, setSearchQuery, setShowSearch, onMenuToggle }) {
   const {
     activeDomain, activeMarketSection, activeIslandGroup,
     activeIsland, activeCategory, setActiveCategory,
-    activePriceRange, setActivePriceRange,
-    toggleSearch,
+    activePriceRange, setActivePriceRange
   } = useStore();
 
   const contextKey = activeDomain === 'Marketplace' ? activeMarketSection : activeIslandGroup;
-  const filters    = FILTER_CONFIG[contextKey] || FILTER_CONFIG.FreelancerGigs;
+  const filters = FILTER_CONFIG[contextKey] || FILTER_CONFIG.FreelancerGigs;
 
   const sectionLabel = activeDomain === 'Marketplace'
     ? (activeMarketSection === 'FreelancerGigs' ? 'Freelancer Gigs' : 'Business Gigs')
@@ -98,19 +97,18 @@ function ChroniclesHeader({ onMenuToggle }) {
 
   return (
     <header className="chronicles-header">
-      {/* Hamburger — visible on mobile only */}
+      {/* Hamburger — visible on mobile only via CSS */}
       <button className="hamburger-btn" onClick={onMenuToggle} aria-label="Open menu">
         <Menu size={18} />
       </button>
 
-      {/* Search bar — clicking opens GlobalSearch overlay */}
-      <div className="header-search" onClick={toggleSearch} role="button" tabIndex={0} onKeyDown={e => e.key === 'Enter' && toggleSearch()}>
+      <div className="header-search">
         <Search size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
         <input
-          readOnly
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          onFocus={() => setShowSearch(true)}
           placeholder={`Search ${sectionLabel}...`}
-          style={{ cursor: 'pointer', pointerEvents: 'none' }}
-          tabIndex={-1}
         />
       </div>
 
@@ -133,6 +131,8 @@ function ChroniclesHeader({ onMenuToggle }) {
 // ─── Main App Component ───────────────────────────────────────────────────────
 export default function App() {
   const { activeDomain, activeIsland, selectedGigId, selectedGig, clearSelectedGig } = useStore();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
@@ -140,7 +140,7 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      {/* Mobile sidebar overlay */}
+      {/* Mobile overlay — clicking it closes the sidebar */}
       <div
         className={`sidebar-overlay${isMobileMenuOpen ? ' visible' : ''}`}
         onClick={closeMobileMenu}
@@ -150,40 +150,108 @@ export default function App() {
       <Sidebar isMobileOpen={isMobileMenuOpen} onMobileClose={closeMobileMenu} />
 
       <main className="main-content">
-        <ChroniclesHeader onMenuToggle={toggleMobileMenu} />
+        <ChroniclesHeader
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          setShowSearch={setShowSearch}
+          onMenuToggle={toggleMobileMenu}
+        />
+
+        {showSearch && searchQuery.length > 0 && (
+          <GlobalSearch query={searchQuery} onClose={() => setShowSearch(false)} />
+        )}
 
         <div className="content-area">
-          {/* ── Transactional Engine ── */}
+          {/* ── Transactional Engine: show ServiceDetails or browse grid ── */}
           {selectedGigId ? (
             <div className="service-details-page">
               <button className="service-details-back" onClick={clearSelectedGig}>
                 ← Back to Gigs
               </button>
+              {/* ServiceDetails adapted for page rendering (isOpen always true, onClose = clearSelectedGig) */}
               <ServiceDetails
                 gig={selectedGig}
                 isOpen={true}
                 onClose={clearSelectedGig}
-                asPage={true}
+                asPage={true}   // signals the component to render inline, not as a drawer
               />
             </div>
           ) : activeDomain === 'Marketplace' ? (
             <div className="marketplace-grid">
-              <GigCard id="gig-001" island={activeIsland} emoji="🎨" />
-              <GigCard id="gig-002" title="Local Logistics Hero"          price={15}  rating={5.0} reviewCount={12} island={activeIsland} imageBg="linear-gradient(135deg,#1a3a2a,#2d6a4f)"  emoji="🚚" sellerName="Brian O."   sellerXP={650}  />
-              <GigCard id="gig-003" title="Island Beauty Pack"            price={85}  rating={4.8} reviewCount={44} island={activeIsland} imageBg="linear-gradient(135deg,#2a1a3a,#6a2d6a)"  emoji="✨" sellerName="Wanjiku G." sellerXP={2200} />
-              <GigCard id="gig-004" title="Sports Coaching Session"       price={35}  rating={4.7} reviewCount={89} island="Sports"       imageBg="linear-gradient(135deg,#1a2a3a,#2d4f6a)"  emoji="⚽" sellerName="Otieno K."  sellerXP={3100} deliveryDays={1} />
-              <GigCard id="gig-005" title="Curriculum Design & Tutoring"  price={60}  rating={5.0} reviewCount={23} island="Education"    imageBg="linear-gradient(135deg,#1a2a1a,#3a6a2d)"  emoji="📚" sellerName="Njeri W."   sellerXP={980}  deliveryDays={5} />
-              <GigCard id="gig-006" title="Brand Identity Full Package"   price={120} rating={4.9} reviewCount={61} island={activeIsland} imageBg="linear-gradient(135deg,#3a2a1a,#6a4f2d)"  emoji="🏷️" sellerName="Amina S."  sellerXP={4500} deliveryDays={7} />
+              <GigCard
+                id="gig-001"
+                island={activeIsland}
+                emoji="🎨"
+              />
+              <GigCard
+                id="gig-002"
+                title="Local Logistics Hero"
+                price={15}
+                rating={5.0}
+                reviewCount={12}
+                island={activeIsland}
+                imageBg="linear-gradient(135deg, #1a3a2a 0%, #2d6a4f 100%)"
+                emoji="🚚"
+                sellerName="Brian O."
+                sellerXP={650}
+              />
+              <GigCard
+                id="gig-003"
+                title="Island Beauty Pack"
+                price={85}
+                rating={4.8}
+                reviewCount={44}
+                island={activeIsland}
+                imageBg="linear-gradient(135deg, #2a1a3a 0%, #6a2d6a 100%)"
+                emoji="✨"
+                sellerName="Wanjiku G."
+                sellerXP={2200}
+              />
+              <GigCard
+                id="gig-004"
+                title="Sports Coaching Session"
+                price={35}
+                rating={4.7}
+                reviewCount={89}
+                island="Sports"
+                imageBg="linear-gradient(135deg, #1a2a3a 0%, #2d4f6a 100%)"
+                emoji="⚽"
+                sellerName="Otieno K."
+                sellerXP={3100}
+                deliveryDays={1}
+              />
+              <GigCard
+                id="gig-005"
+                title="Curriculum Design & Tutoring"
+                price={60}
+                rating={5.0}
+                reviewCount={23}
+                island="Education"
+                imageBg="linear-gradient(135deg, #1a2a1a 0%, #3a6a2d 100%)"
+                emoji="📚"
+                sellerName="Njeri W."
+                sellerXP={980}
+                deliveryDays={5}
+              />
+              <GigCard
+                id="gig-006"
+                title="Brand Identity Full Package"
+                price={120}
+                rating={4.9}
+                reviewCount={61}
+                island={activeIsland}
+                imageBg="linear-gradient(135deg, #3a2a1a 0%, #6a4f2d 100%)"
+                emoji="🏷️"
+                sellerName="Amina S."
+                sellerXP={4500}
+                deliveryDays={7}
+              />
             </div>
           ) : (
             <Feed activeIsland={activeIsland} />
           )}
         </div>
       </main>
-
-      {/* ── Global overlays — mounted outside main to avoid z-index conflicts ── */}
-      <GlobalSearch />
-      <ProfileDrawer />
     </div>
   );
 }

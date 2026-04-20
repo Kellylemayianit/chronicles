@@ -1,12 +1,14 @@
 import useGamification from '../../hooks/useGamification';
+import useStore from '../../store/useStore';
 
 /**
  * GigCard
- * @param {{ title: string, price: number, sellerName: string, sellerXP: number,
- *           island: string, rating: number, reviewCount: number,
- *           imageBg: string, deliveryDays: number }} props
+ * @param {{ id: string, title: string, price: number, sellerName: string,
+ *           sellerXP: number, island: string, rating: number, reviewCount: number,
+ *           imageBg: string, deliveryDays: number, emoji: string }} props
  */
 export default function GigCard({
+  id = 'gig-default',
   title = 'Professional Logo Design for Your Brand',
   price = 49,
   sellerName = 'Aisha N.',
@@ -16,18 +18,25 @@ export default function GigCard({
   reviewCount = 127,
   imageBg = 'linear-gradient(135deg, #2d6a4f 0%, #52b788 100%)',
   deliveryDays = 3,
+  emoji = '🎨',
 }) {
   const { rank } = useGamification(sellerXP);
+  const { setSelectedGig } = useStore();
 
   const ISLAND_COLORS = {
-    Sports: { bg: 'rgba(234,88,12,0.12)', text: '#ea580c' },
-    Beauty: { bg: 'rgba(168,85,247,0.12)', text: '#a855f7' },
+    Sports:    { bg: 'rgba(234,88,12,0.12)',  text: '#ea580c' },
+    Beauty:    { bg: 'rgba(168,85,247,0.12)', text: '#a855f7' },
     Education: { bg: 'rgba(59,130,246,0.12)', text: '#3b82f6' },
   };
   const islandStyle = ISLAND_COLORS[island] ?? { bg: 'rgba(99,102,241,0.12)', text: '#6366f1' };
 
+  const handleClick = () => {
+    setSelectedGig({ id, title, price, sellerName, sellerXP, island, rating, reviewCount, imageBg, deliveryDays, emoji });
+  };
+
   return (
     <div
+      onClick={handleClick}
       style={{
         background: 'var(--card-bg)',
         border: '1px solid var(--border)',
@@ -38,6 +47,7 @@ export default function GigCard({
         transition: 'transform 0.2s ease, box-shadow 0.2s ease',
         cursor: 'pointer',
         boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+        animation: 'fadeInUp 0.25s ease both',
       }}
       onMouseEnter={e => {
         e.currentTarget.style.transform = 'translateY(-3px)';
@@ -55,7 +65,7 @@ export default function GigCard({
         position: 'relative',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
-        <span style={{ fontSize: 42, opacity: 0.6 }}>🎨</span>
+        <span style={{ fontSize: 42, opacity: 0.6 }}>{emoji}</span>
         <div style={{
           position: 'absolute', top: 10, left: 10,
           background: islandStyle.bg, color: islandStyle.text,

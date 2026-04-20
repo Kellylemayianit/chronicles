@@ -5,7 +5,6 @@ import {
   Zap, Sparkles, BookOpen,
   ShoppingCart, FileText, Package, Bookmark, DollarSign,
   Rss, School, BarChart2, Calendar, Users,
-  ChevronUp,
 } from 'lucide-react';
 import useStore from '../../store/useStore';
 
@@ -18,13 +17,17 @@ const ISLANDS = [
 ];
 
 const MARKETPLACE_SECTIONS = [
-  { id: 'FreelancerGigs', label: 'Freelancer Gigs', Icon: ShoppingBag, description: 'Individual providers' },
-  { id: 'BusinessGigs',   label: 'Business Gigs',   Icon: Building2,   description: 'Verified businesses'  },
+  { id: 'FreelancerGigs', label: 'Freelancer Gigs', Icon: ShoppingBag,
+    description: 'Individual providers' },
+  { id: 'BusinessGigs',   label: 'Business Gigs',   Icon: Building2,
+    description: 'Verified businesses' },
 ];
 
 const ISLAND_GROUPS = [
-  { id: 'ProCommunities', label: 'Pro Communities', Icon: Trophy, badge: 'Paid', badgeColor: 'var(--accent-2)', badgeBg: 'rgba(245,158,11,0.12)' },
-  { id: 'OpenGroves',     label: 'Open Groves',     Icon: Leaf,   badge: 'Free', badgeColor: 'var(--accent)',   badgeBg: 'rgba(82,183,136,0.12)' },
+  { id: 'ProCommunities', label: 'Pro Communities', Icon: Trophy,
+    badge: 'Paid', badgeColor: 'var(--accent-2)', badgeBg: 'rgba(245,158,11,0.12)' },
+  { id: 'OpenGroves',     label: 'Open Groves',     Icon: Leaf,
+    badge: 'Free', badgeColor: 'var(--accent)',    badgeBg: 'rgba(82,183,136,0.12)' },
 ];
 
 const MARKETPLACE_LINKS = [
@@ -43,7 +46,8 @@ const COMMUNITY_LINKS = [
   { label: 'Members',     Icon: Users },
 ];
 
-// ─── Inline cosmetic sub-styles ───────────────────────────────────────────────
+// ─── Inline sub-styles (non-layout, non-width: purely cosmetic) ──────────────
+
 const sectionLabel = {
   fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.12em',
   color: 'var(--text-muted)', textTransform: 'uppercase',
@@ -55,21 +59,23 @@ const divider = {
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
+
 export default function Sidebar({ isMobileOpen, onMobileClose }) {
   const {
     activeDomain, setActiveDomain,
     activeMarketSection, setActiveMarketSection,
     activeIslandGroup, setActiveIslandGroup,
     activeIsland, setActiveIsland,
-    toggleProfile,
   } = useStore();
 
   const [collapsed, setCollapsed] = useState(false);
 
   const contextLinks = activeDomain === 'Marketplace' ? MARKETPLACE_LINKS : COMMUNITY_LINKS;
 
+  // When a mobile nav item is clicked, close the drawer
   const handleMobileNav = (fn) => () => { fn(); onMobileClose?.(); };
 
+  // ── Shared button factory ──────────────────────────────────────────────────
   const navBtn = (isActive, accentColor, activeBg, onClick, content, title) => (
     <button
       onClick={onClick}
@@ -93,6 +99,7 @@ export default function Sidebar({ isMobileOpen, onMobileClose }) {
     </button>
   );
 
+  // Compute sidebar class names
   const sidebarClasses = [
     'sidebar',
     collapsed ? 'collapsed' : '',
@@ -108,12 +115,15 @@ export default function Sidebar({ isMobileOpen, onMobileClose }) {
           width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
           background: 'linear-gradient(135deg, var(--accent), var(--accent-2))',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 17,
+          boxShadow: '0 2px 10px var(--glow)', fontSize: 17,
         }}>
           📜
         </div>
         {!collapsed && (
-          <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+          <span style={{
+            fontFamily: 'var(--font-display)', fontSize: '1.1rem',
+            fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap',
+          }}>
             Chronicles
           </span>
         )}
@@ -142,7 +152,12 @@ export default function Sidebar({ isMobileOpen, onMobileClose }) {
             <>
               <Icon size={15} style={{ flexShrink: 0 }} />
               {!collapsed && <span style={{ whiteSpace: 'nowrap' }}>{domain}</span>}
-              {!collapsed && isActive && <span style={{ marginLeft: 'auto', width: 5, height: 5, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0 }} />}
+              {!collapsed && isActive && (
+                <span style={{
+                  marginLeft: 'auto', width: 5, height: 5,
+                  borderRadius: '50%', background: 'var(--accent)', flexShrink: 0,
+                }} />
+              )}
             </>,
             domain,
           );
@@ -167,7 +182,11 @@ export default function Sidebar({ isMobileOpen, onMobileClose }) {
                     {!collapsed && (
                       <div style={{ textAlign: 'left' }}>
                         <div style={{ whiteSpace: 'nowrap', lineHeight: 1.3 }}>{label}</div>
-                        {isActive && <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 400 }}>{description}</div>}
+                        {isActive && (
+                          <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 400 }}>
+                            {description}
+                          </div>
+                        )}
                       </div>
                     )}
                   </>,
@@ -192,7 +211,12 @@ export default function Sidebar({ isMobileOpen, onMobileClose }) {
                     {!collapsed && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%' }}>
                         <span style={{ whiteSpace: 'nowrap' }}>{label}</span>
-                        <span style={{ fontSize: '0.6rem', fontWeight: 700, color: badgeColor, background: badgeBg, borderRadius: 4, padding: '1px 5px', border: `1px solid ${badgeColor}33`, lineHeight: 1.5 }}>
+                        <span style={{
+                          fontSize: '0.6rem', fontWeight: 700,
+                          color: badgeColor, background: badgeBg,
+                          borderRadius: 4, padding: '1px 5px',
+                          border: `1px solid ${badgeColor}33`, lineHeight: 1.5,
+                        }}>
                           {badge}
                         </span>
                       </div>
@@ -223,7 +247,12 @@ export default function Sidebar({ isMobileOpen, onMobileClose }) {
                         >
                           <IslandIcon size={12} style={{ flexShrink: 0 }} />
                           <span>{islandLabel}</span>
-                          {isIslandActive && <div style={{ marginLeft: 'auto', width: 4, height: 4, borderRadius: '50%', background: 'var(--accent)' }} />}
+                          {isIslandActive && (
+                            <div style={{
+                              marginLeft: 'auto', width: 4, height: 4,
+                              borderRadius: '50%', background: 'var(--accent)',
+                            }} />
+                          )}
                         </button>
                       );
                     })}
@@ -264,16 +293,12 @@ export default function Sidebar({ isMobileOpen, onMobileClose }) {
         ))}
       </div>
 
-      {/* ─── User footer — click to open ProfileDrawer ───────────────────── */}
-      <div
-        className="sidebar-user-footer"
-        onClick={toggleProfile}
-        role="button"
-        tabIndex={0}
-        onKeyDown={e => e.key === 'Enter' && toggleProfile()}
-        title="View profile"
-        aria-label="Open profile drawer"
-      >
+      {/* ─── User footer ────────────────────────────────────────────────────── */}
+      <div style={{
+        padding: '12px 14px', borderTop: '1px solid var(--border)',
+        display: 'flex', alignItems: 'center', gap: 10,
+        background: 'var(--sidebar-footer-bg)',
+      }}>
         <div style={{
           width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
           background: 'linear-gradient(135deg, #a3b899, #3a7d44)',
@@ -283,15 +308,14 @@ export default function Sidebar({ isMobileOpen, onMobileClose }) {
           K
         </div>
         {!collapsed && (
-          <>
-            <div style={{ overflow: 'hidden', flex: 1, minWidth: 0 }}>
-              <div className="sidebar-user-name">Kaelen</div>
-              <div style={{ fontSize: '0.68rem', color: 'var(--accent)', whiteSpace: 'nowrap' }}>
-                🌿 Sprout · 240 XP
-              </div>
+          <div style={{ overflow: 'hidden' }}>
+            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              Kamau M.
             </div>
-            <ChevronUp size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-          </>
+            <div style={{ fontSize: '0.68rem', color: 'var(--accent)', whiteSpace: 'nowrap' }}>
+              🌿 Sprout · 240 XP
+            </div>
+          </div>
         )}
       </div>
     </aside>

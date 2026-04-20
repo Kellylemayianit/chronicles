@@ -1,0 +1,42 @@
+# Dependencies
+# These are thousands of small files installed by npm. 
+# They should never be uploaded; the 'package.json' tells GitHub how to reinstall them.
+node_modules/
+.pnp
+.pnp.js
+
+# Testing
+coverage/
+
+# Production / Build
+# This is the folder generated when you run 'npm run build'.
+dist/
+build/
+
+# Misc
+.DS_Store
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# User Specific / Heavy Files
+# This blocks the docs and zips you mentioned earlier.
+*.zip
+*.rar
+docs/
+temp/
+backups/
+
+# Editor-specific
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj

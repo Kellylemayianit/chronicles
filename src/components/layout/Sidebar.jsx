@@ -1,205 +1,297 @@
 import { useState } from 'react';
+import {
+  ShoppingBag, Building2, Trophy, Leaf,
+  ChevronLeft, ChevronRight,
+  Zap, Sparkles, BookOpen,
+  ShoppingCart, FileText, Package, Bookmark, DollarSign,
+  Rss, School, BarChart2, Calendar, Users,
+  ChevronUp,
+} from 'lucide-react';
 import useStore from '../../store/useStore';
 
-const ISLANDS = ['Sports', 'Beauty', 'Education'];
+// ─── Config ───────────────────────────────────────────────────────────────────
 
-const ISLAND_ICONS = {
-  Sports: '⚡',
-  Beauty: '✨',
-  Education: '📚',
-};
+const ISLANDS = [
+  { id: 'Sports',    label: 'Sports',    Icon: Zap },
+  { id: 'Beauty',    label: 'Beauty',    Icon: Sparkles },
+  { id: 'Education', label: 'Education', Icon: BookOpen },
+];
+
+const MARKETPLACE_SECTIONS = [
+  { id: 'FreelancerGigs', label: 'Freelancer Gigs', Icon: ShoppingBag, description: 'Individual providers' },
+  { id: 'BusinessGigs',   label: 'Business Gigs',   Icon: Building2,   description: 'Verified businesses'  },
+];
+
+const ISLAND_GROUPS = [
+  { id: 'ProCommunities', label: 'Pro Communities', Icon: Trophy, badge: 'Paid', badgeColor: 'var(--accent-2)', badgeBg: 'rgba(245,158,11,0.12)' },
+  { id: 'OpenGroves',     label: 'Open Groves',     Icon: Leaf,   badge: 'Free', badgeColor: 'var(--accent)',   badgeBg: 'rgba(82,183,136,0.12)' },
+];
 
 const MARKETPLACE_LINKS = [
-  { label: 'Browse Gigs', icon: '🛒', href: '#' },
-  { label: 'Post a Request', icon: '📝', href: '#' },
-  { label: 'My Orders', icon: '📦', href: '#' },
-  { label: 'Saved', icon: '🔖', href: '#' },
-  { label: 'Earnings', icon: '💰', href: '#' },
+  { label: 'Browse Gigs',    Icon: ShoppingCart },
+  { label: 'Post a Request', Icon: FileText },
+  { label: 'My Orders',      Icon: Package },
+  { label: 'Saved',          Icon: Bookmark },
+  { label: 'Earnings',       Icon: DollarSign },
 ];
 
 const COMMUNITY_LINKS = [
-  { label: 'Feed', icon: '🌿', href: '#' },
-  { label: 'Classrooms', icon: '🏫', href: '#' },
-  { label: 'Leaderboard', icon: '🏆', href: '#' },
-  { label: 'Events', icon: '🗓️', href: '#' },
-  { label: 'Members', icon: '👥', href: '#' },
+  { label: 'Feed',        Icon: Rss },
+  { label: 'Classrooms',  Icon: School },
+  { label: 'Leaderboard', Icon: BarChart2 },
+  { label: 'Events',      Icon: Calendar },
+  { label: 'Members',     Icon: Users },
 ];
 
-export default function Sidebar() {
-  const { activeMode, setActiveMode, activeIsland, setActiveIsland } = useStore();
+// ─── Inline cosmetic sub-styles ───────────────────────────────────────────────
+const sectionLabel = {
+  fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.12em',
+  color: 'var(--text-muted)', textTransform: 'uppercase',
+  paddingLeft: 8, marginBottom: 6,
+};
+
+const divider = {
+  height: 1, background: 'var(--border)', margin: '6px 14px',
+};
+
+// ─── Component ────────────────────────────────────────────────────────────────
+export default function Sidebar({ isMobileOpen, onMobileClose }) {
+  const {
+    activeDomain, setActiveDomain,
+    activeMarketSection, setActiveMarketSection,
+    activeIslandGroup, setActiveIslandGroup,
+    activeIsland, setActiveIsland,
+    toggleProfile,
+  } = useStore();
+
   const [collapsed, setCollapsed] = useState(false);
-  const contextLinks = activeMode === 'Marketplace' ? MARKETPLACE_LINKS : COMMUNITY_LINKS;
+
+  const contextLinks = activeDomain === 'Marketplace' ? MARKETPLACE_LINKS : COMMUNITY_LINKS;
+
+  const handleMobileNav = (fn) => () => { fn(); onMobileClose?.(); };
+
+  const navBtn = (isActive, accentColor, activeBg, onClick, content, title) => (
+    <button
+      onClick={onClick}
+      title={title}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 9,
+        width: '100%', padding: collapsed ? '10px 0' : '9px 12px',
+        justifyContent: collapsed ? 'center' : 'flex-start',
+        borderRadius: 10, border: 'none', cursor: 'pointer',
+        background: isActive ? activeBg : 'transparent',
+        color: isActive ? accentColor : 'var(--text-secondary)',
+        fontWeight: isActive ? 700 : 500,
+        fontSize: '0.85rem', marginBottom: 2,
+        transition: 'all 0.15s ease',
+        fontFamily: 'var(--font-body)',
+      }}
+      onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--hover-bg)'; }}
+      onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+    >
+      {content}
+    </button>
+  );
+
+  const sidebarClasses = [
+    'sidebar',
+    collapsed ? 'collapsed' : '',
+    isMobileOpen ? 'mobile-open' : '',
+  ].filter(Boolean).join(' ');
 
   return (
-    <aside
-      className="kimana-sidebar"
-      style={{
-        width: collapsed ? '72px' : '240px',
-        transition: 'width 0.3s cubic-bezier(0.4,0,0.2,1)',
-        background: 'var(--sidebar-bg)',
-        borderRight: '1px solid var(--border)',
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100vh',
-        position: 'sticky',
-        top: 0,
-        overflow: 'hidden',
-        zIndex: 50,
-        flexShrink: 0,
-      }}
-    >
-      {/* Logo */}
-      <div style={{ padding: '20px 16px 12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+    <aside className={sidebarClasses}>
+
+      {/* ── Logo ── */}
+      <div style={{ padding: '18px 14px 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{
-          width: 38, height: 38, borderRadius: '50%',
+          width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
           background: 'linear-gradient(135deg, var(--accent), var(--accent-2))',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 18, flexShrink: 0, boxShadow: '0 2px 12px var(--glow)',
+          fontSize: 17,
         }}>
-          🦋
+          📜
         </div>
         {!collapsed && (
-          <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
-            Kimana
+          <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+            Chronicles
           </span>
         )}
         <button
-          onClick={() => setCollapsed(!collapsed)}
+          onClick={() => setCollapsed(c => !c)}
           style={{
             marginLeft: 'auto', background: 'none', border: 'none',
-            cursor: 'pointer', color: 'var(--text-muted)', fontSize: 16,
+            cursor: 'pointer', color: 'var(--text-muted)',
             flexShrink: 0, padding: '2px 4px', borderRadius: 6,
+            display: 'flex', alignItems: 'center',
           }}
-          title={collapsed ? 'Expand' : 'Collapse'}
         >
-          {collapsed ? '›' : '‹'}
+          {collapsed ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
         </button>
       </div>
 
-      {/* === GLOBAL SECTION: Mode Switcher === */}
-      <div style={{ padding: '8px 10px' }}>
-        {!collapsed && (
-          <p style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-muted)', textTransform: 'uppercase', paddingLeft: 8, marginBottom: 6 }}>
-            Mode
-          </p>
-        )}
-        {['Marketplace', 'Community'].map((mode) => {
-          const isActive = activeMode === mode;
-          return (
-            <button
-              key={mode}
-              onClick={() => setActiveMode(mode)}
-              title={mode}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                width: '100%', padding: collapsed ? '10px 16px' : '9px 12px',
-                borderRadius: 10, border: 'none', cursor: 'pointer',
-                background: isActive ? 'var(--active-bg)' : 'transparent',
-                color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
-                fontWeight: isActive ? 700 : 500,
-                fontSize: '0.88rem',
-                marginBottom: 2,
-                transition: 'all 0.15s ease',
-                justifyContent: collapsed ? 'center' : 'flex-start',
-              }}
-            >
-              <span style={{ fontSize: 17, flexShrink: 0 }}>{mode === 'Marketplace' ? '🛍️' : '🌿'}</span>
-              {!collapsed && <span style={{ whiteSpace: 'nowrap' }}>{mode}</span>}
-              {!collapsed && isActive && <span style={{ marginLeft: 'auto', width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0 }} />}
-            </button>
+      {/* ─── DOMAIN ─────────────────────────────────────────────────────────── */}
+      <div style={{ padding: '4px 10px' }}>
+        {!collapsed && <p style={sectionLabel}>Domain</p>}
+        {['Marketplace', 'Islands'].map(domain => {
+          const isActive = activeDomain === domain;
+          const Icon = domain === 'Marketplace' ? ShoppingBag : Leaf;
+          return navBtn(
+            isActive, 'var(--accent)', 'var(--active-bg)',
+            handleMobileNav(() => setActiveDomain(domain)),
+            <>
+              <Icon size={15} style={{ flexShrink: 0 }} />
+              {!collapsed && <span style={{ whiteSpace: 'nowrap' }}>{domain}</span>}
+              {!collapsed && isActive && <span style={{ marginLeft: 'auto', width: 5, height: 5, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0 }} />}
+            </>,
+            domain,
           );
         })}
       </div>
 
-      <div style={{ height: 1, background: 'var(--border)', margin: '6px 14px' }} />
+      <div style={divider} />
 
-      {/* === GLOBAL SECTION: Island Switcher === */}
-      <div style={{ padding: '8px 10px' }}>
-        {!collapsed && (
-          <p style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-muted)', textTransform: 'uppercase', paddingLeft: 8, marginBottom: 6 }}>
-            Island
-          </p>
-        )}
-        {ISLANDS.map((island) => {
-          const isActive = activeIsland === island;
-          return (
-            <button
-              key={island}
-              onClick={() => setActiveIsland(island)}
-              title={island}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                width: '100%', padding: collapsed ? '10px 16px' : '9px 12px',
-                borderRadius: 10, border: 'none', cursor: 'pointer',
-                background: isActive ? 'var(--island-active-bg)' : 'transparent',
-                color: isActive ? 'var(--accent-2)' : 'var(--text-secondary)',
-                fontWeight: isActive ? 700 : 500,
-                fontSize: '0.88rem',
-                marginBottom: 2,
-                transition: 'all 0.15s ease',
-                justifyContent: collapsed ? 'center' : 'flex-start',
-              }}
-            >
-              <span style={{ fontSize: 17, flexShrink: 0 }}>{ISLAND_ICONS[island]}</span>
-              {!collapsed && <span style={{ whiteSpace: 'nowrap' }}>{island}</span>}
-            </button>
-          );
-        })}
-      </div>
+      {/* ─── SUB-CATEGORY ───────────────────────────────────────────────────── */}
+      {activeDomain === 'Marketplace' ? (
+        <div style={{ padding: '4px 10px' }}>
+          {!collapsed && <p style={sectionLabel}>Category</p>}
+          {MARKETPLACE_SECTIONS.map(({ id, label, Icon, description }) => {
+            const isActive = activeMarketSection === id;
+            return (
+              <div key={id}>
+                {navBtn(
+                  isActive, 'var(--accent-2)', 'var(--island-active-bg)',
+                  handleMobileNav(() => setActiveMarketSection(id)),
+                  <>
+                    <Icon size={15} style={{ flexShrink: 0 }} />
+                    {!collapsed && (
+                      <div style={{ textAlign: 'left' }}>
+                        <div style={{ whiteSpace: 'nowrap', lineHeight: 1.3 }}>{label}</div>
+                        {isActive && <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 400 }}>{description}</div>}
+                      </div>
+                    )}
+                  </>,
+                  label,
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div style={{ padding: '4px 10px' }}>
+          {!collapsed && <p style={sectionLabel}>Group</p>}
+          {ISLAND_GROUPS.map(({ id, label, Icon, badge, badgeColor, badgeBg }) => {
+            const isActive = activeIslandGroup === id;
+            return (
+              <div key={id}>
+                {navBtn(
+                  isActive, 'var(--accent-2)', 'var(--island-active-bg)',
+                  () => setActiveIslandGroup(id),
+                  <>
+                    <Icon size={15} style={{ flexShrink: 0 }} />
+                    {!collapsed && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%' }}>
+                        <span style={{ whiteSpace: 'nowrap' }}>{label}</span>
+                        <span style={{ fontSize: '0.6rem', fontWeight: 700, color: badgeColor, background: badgeBg, borderRadius: 4, padding: '1px 5px', border: `1px solid ${badgeColor}33`, lineHeight: 1.5 }}>
+                          {badge}
+                        </span>
+                      </div>
+                    )}
+                  </>,
+                  label,
+                )}
+                {isActive && !collapsed && (
+                  <div style={{ paddingLeft: 12, marginBottom: 4 }}>
+                    {ISLANDS.map(({ id: islandId, label: islandLabel, Icon: IslandIcon }) => {
+                      const isIslandActive = activeIsland === islandId;
+                      return (
+                        <button
+                          key={islandId}
+                          onClick={handleMobileNav(() => setActiveIsland(islandId))}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 8,
+                            width: '100%', padding: '7px 10px',
+                            borderRadius: 8, border: 'none', cursor: 'pointer',
+                            background: isIslandActive ? 'rgba(82,183,136,0.08)' : 'transparent',
+                            color: isIslandActive ? 'var(--accent)' : 'var(--text-muted)',
+                            fontSize: '0.8rem', fontWeight: isIslandActive ? 600 : 400,
+                            fontFamily: 'var(--font-body)', marginBottom: 1,
+                            transition: 'all 0.15s ease',
+                          }}
+                          onMouseEnter={e => { if (!isIslandActive) e.currentTarget.style.background = 'var(--hover-bg)'; }}
+                          onMouseLeave={e => { if (!isIslandActive) e.currentTarget.style.background = 'transparent'; }}
+                        >
+                          <IslandIcon size={12} style={{ flexShrink: 0 }} />
+                          <span>{islandLabel}</span>
+                          {isIslandActive && <div style={{ marginLeft: 'auto', width: 4, height: 4, borderRadius: '50%', background: 'var(--accent)' }} />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
-      <div style={{ height: 1, background: 'var(--border)', margin: '6px 14px' }} />
+      <div style={divider} />
 
-      {/* === CONTEXTUAL SECTION: Mode-specific links === */}
-      <div style={{ padding: '8px 10px', flex: 1 }}>
-        {!collapsed && (
-          <p style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-muted)', textTransform: 'uppercase', paddingLeft: 8, marginBottom: 6 }}>
-            {activeMode}
-          </p>
-        )}
-        {contextLinks.map((link) => (
+      {/* ─── CONTEXTUAL LINKS ───────────────────────────────────────────────── */}
+      <div style={{ padding: '4px 10px', flex: 1, overflowY: 'auto' }}>
+        {!collapsed && <p style={sectionLabel}>{activeDomain}</p>}
+        {contextLinks.map(({ label, Icon }) => (
           <a
-            key={link.label}
-            href={link.href}
-            title={link.label}
+            key={label}
+            href="#"
+            title={label}
+            onClick={e => { e.preventDefault(); onMobileClose?.(); }}
             style={{
-              display: 'flex', alignItems: 'center', gap: 10,
-              padding: collapsed ? '10px 16px' : '9px 12px',
+              display: 'flex', alignItems: 'center', gap: 9,
+              padding: collapsed ? '10px 0' : '9px 12px',
+              justifyContent: collapsed ? 'center' : 'flex-start',
               borderRadius: 10, textDecoration: 'none',
               color: 'var(--text-secondary)',
-              fontSize: '0.88rem', fontWeight: 500,
-              marginBottom: 2,
+              fontSize: '0.85rem', fontWeight: 500, marginBottom: 2,
               transition: 'all 0.15s ease',
-              justifyContent: collapsed ? 'center' : 'flex-start',
             }}
             onMouseEnter={e => e.currentTarget.style.background = 'var(--hover-bg)'}
             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
           >
-            <span style={{ fontSize: 16, flexShrink: 0 }}>{link.icon}</span>
-            {!collapsed && <span style={{ whiteSpace: 'nowrap' }}>{link.label}</span>}
+            <Icon size={15} style={{ flexShrink: 0 }} />
+            {!collapsed && <span style={{ whiteSpace: 'nowrap' }}>{label}</span>}
           </a>
         ))}
       </div>
 
-      {/* User profile footer */}
-      <div style={{
-        padding: '12px 14px',
-        borderTop: '1px solid var(--border)',
-        display: 'flex', alignItems: 'center', gap: 10,
-        background: 'var(--sidebar-footer-bg)',
-      }}>
+      {/* ─── User footer — click to open ProfileDrawer ───────────────────── */}
+      <div
+        className="sidebar-user-footer"
+        onClick={toggleProfile}
+        role="button"
+        tabIndex={0}
+        onKeyDown={e => e.key === 'Enter' && toggleProfile()}
+        title="View profile"
+        aria-label="Open profile drawer"
+      >
         <div style={{
-          width: 34, height: 34, borderRadius: '50%',
+          width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
           background: 'linear-gradient(135deg, #a3b899, #3a7d44)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 14, flexShrink: 0, fontWeight: 700, color: '#fff',
+          fontSize: 13, fontWeight: 700, color: '#fff',
         }}>
           K
         </div>
         {!collapsed && (
-          <div style={{ overflow: 'hidden' }}>
-            <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Kamau M.</div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--accent)', whiteSpace: 'nowrap' }}>🌿 Sprout · 240 XP</div>
-          </div>
+          <>
+            <div style={{ overflow: 'hidden', flex: 1, minWidth: 0 }}>
+              <div className="sidebar-user-name">Kaelen</div>
+              <div style={{ fontSize: '0.68rem', color: 'var(--accent)', whiteSpace: 'nowrap' }}>
+                🌿 Sprout · 240 XP
+              </div>
+            </div>
+            <ChevronUp size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+          </>
         )}
       </div>
     </aside>
