@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { Search, ChevronDown, Menu } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
-import useStore from './store/useStore';
-import { getRank } from './store/useStore';
+import useStore, { getRank } from './store/useStore';
 import { GIGS } from './data/registry';
 import Sidebar from './components/layout/Sidebar';
 import GigCard from './components/marketplace/GigCard';
 import ServiceDetails from './components/marketplace/ServiceDetails';
 import Feed from './components/community/Feed';
+import Classroom from './components/community/Classroom';
 import GlobalSearch from './components/layout/GlobalSearch';
 import ProfileDrawer from './components/layout/ProfileDrawer';
 
@@ -35,20 +35,19 @@ const FILTER_CONFIG = {
 
 // ─── Framer Motion card variants ──────────────────────────────────────────────
 const cardVariants = {
-  hidden: { opacity: 0, scale: 0.94, y: 12 },
+  hidden:  { opacity: 0, scale: 0.94, y: 12 },
   visible: (i) => ({
     opacity: 1, scale: 1, y: 0,
-    transition: {
-      delay: i * 0.045,
-      duration: 0.32,
-      ease: [0.16, 1, 0.3, 1],
-    },
+    transition: { delay: i * 0.045, duration: 0.32, ease: [0.16, 1, 0.3, 1] },
   }),
   exit: {
     opacity: 0, scale: 0.92, y: -8,
     transition: { duration: 0.18, ease: 'easeIn' },
   },
 };
+
+// ─── XP thresholds (mirrors RANKS — local copy avoids circular dep) ──────────
+const XP_THRESHOLDS = [0, 100, 500, 1500, 5000];
 
 // ─── Dropdown helper ──────────────────────────────────────────────────────────
 function FilterSelect({ value, options, onChange, disabled }) {
@@ -75,19 +74,15 @@ function FilterSelect({ value, options, onChange, disabled }) {
   );
 }
 
-// ─── XP thresholds (mirrors RANKS in useStore, kept local to avoid circular dep)
-const XP_THRESHOLDS = [0, 100, 500, 1500, 5000];
-
-// ─── Live XP / Rank widget — reads userStats directly from store ──────────────
+// ─── Live XP / Rank widget ────────────────────────────────────────────────────
 function UserStatusWidget() {
   const { userStats } = useStore();
-  const { xp } = userStats;
-  const rank        = getRank(xp);
-  const nextMinXP   = XP_THRESHOLDS.find(t => t > xp) ?? Infinity;
-  const prevMinXP   = rank.minXP;
-  const progress    = nextMinXP === Infinity
+  const { xp }       = userStats;
+  const rank         = getRank(xp);
+  const nextMinXP    = XP_THRESHOLDS.find(t => t > xp) ?? Infinity;
+  const progress     = nextMinXP === Infinity
     ? 100
-    : Math.min(100, Math.round(((xp - prevMinXP) / (nextMinXP - prevMinXP)) * 100));
+    : Math.min(100, Math.round(((xp - rank.minXP) / (nextMinXP - rank.minXP)) * 100));
 
   return (
     <div style={{
@@ -138,7 +133,6 @@ function ChroniclesHeader({ onMenuToggle }) {
         <Menu size={18} />
       </button>
 
-      {/* Search bar — click opens GlobalSearch, which writes to store.searchQuery */}
       <div
         className="header-search"
         onClick={toggleSearch}
@@ -157,7 +151,7 @@ function ChroniclesHeader({ onMenuToggle }) {
       </div>
 
       <div className="header-filters">
-        <FilterSelect value={activeCategory} options={filters.categories} onChange={setActiveCategory} />
+        <FilterSelect value={activeCategory}   options={filters.categories} onChange={setActiveCategory} />
         <FilterSelect
           value={activePriceRange} options={filters.prices}
           onChange={setActivePriceRange}
@@ -176,7 +170,7 @@ function ChroniclesHeader({ onMenuToggle }) {
   );
 }
 
-// ─── Animated empty state ──────────────────────────────────────────────────────
+// ─── Animated empty state ─────────────────────────────────────────────────────
 function EmptyState({ query, island }) {
   return (
     <motion.div
@@ -204,7 +198,74 @@ function EmptyState({ query, island }) {
   );
 }
 
-// ─── Main App Component ───────────────────────────────────────────────────────
+// ─── Islands view — toggles between Feed and Classroom via sidebar links ──────
+// The Sidebar's "Classrooms" link will eventually set an activeIslandView state.
+// For now we expose a simple tab toggle inside the content area.
+function IslandsView() {
+  const { activeIsland } = useStore();
+  const [view, setView]  = useState('feed'); // 'feed' | 'classroom'
+
+  return (
+    <div>
+      {/* ── View toggle tabs ── */}
+      <div style={{
+        display: 'flex', gap: 4, marginBottom: 20,
+        background: 'rgba(255,255,255,0.03)',
+        border: '1px solid var(--border)',
+        borderRadius: 12, padding: 4,
+        width: 'fit-content',
+      }}>
+        {[
+          { id: 'feed',      label: '🌿 Feed'      },
+          { id: 'classroom', label: '📚 Classroom'  },
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setView(tab.id)}
+            style={{
+              padding: '7px 18px', borderRadius: 9, border: 'none',
+              background: view === tab.id ? 'rgba(255,255,255,0.08)' : 'transparent',
+              color: view === tab.id ? 'var(--text-primary)' : 'var(--text-muted)',
+              fontFamily: 'var(--font-body)', fontSize: '0.82rem', fontWeight: view === tab.id ? 700 : 500,
+              cursor: 'pointer', transition: 'all 0.15s',
+              boxShadow: view === tab.id ? '0 1px 4px rgba(0,0,0,0.15)' : 'none',
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Animated view swap ── */}
+      <AnimatePresence mode="wait">
+        {view === 'feed' ? (
+          <motion.div
+            key="feed"
+            initial={{ opacity: 0, x: -8 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 8 }}
+            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+          >
+            {/* Feed reads activeIsland and searchQuery from the store itself */}
+            <Feed />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="classroom"
+            initial={{ opacity: 0, x: 8 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -8 }}
+            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <Classroom />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ─── Main App ─────────────────────────────────────────────────────────────────
 export default function App() {
   const {
     activeDomain, activeIsland,
@@ -214,12 +275,10 @@ export default function App() {
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const closeMobileMenu = () => setIsMobileMenuOpen(false);
+  const closeMobileMenu  = () => setIsMobileMenuOpen(false);
   const toggleMobileMenu = () => setIsMobileMenuOpen(o => !o);
 
-  // ── Dual filter: island + searchQuery ───────────────────────────────────────
-  // Both filters are reactive — changing either instantly re-runs this computation
-  // and AnimatePresence handles the smooth card exit/enter transitions.
+  // ── Dual filter: island + searchQuery (Marketplace only) ─────────────────
   const filteredGigs = GIGS.filter(gig => {
     const matchesIsland = !activeIsland || gig.island === activeIsland;
     const q = searchQuery.toLowerCase().trim();
@@ -274,8 +333,6 @@ export default function App() {
                         initial="hidden"
                         animate="visible"
                         exit="exit"
-                        // Glassmorphic hover lift is handled in GigCard via onMouseEnter;
-                        // the layout prop makes positional changes spring-animated.
                         style={{ willChange: 'transform, opacity' }}
                       >
                         <GigCard {...gig} />
@@ -287,13 +344,13 @@ export default function App() {
             </div>
 
           ) : (
-            /* ── Community Feed ── */
-            <Feed activeIsland={activeIsland} />
+            /* ── Islands: Feed + Classroom ── */
+            <IslandsView />
           )}
         </div>
       </main>
 
-      {/* ── Global overlays — above all content ── */}
+      {/* ── Global overlays ── */}
       <GlobalSearch />
       <ProfileDrawer />
     </div>

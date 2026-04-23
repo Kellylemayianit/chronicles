@@ -6,30 +6,60 @@
 // ─── Island palette helpers (keep in sync with index.css tokens) ─────────────
 export const ISLAND_META = {
   Sports: {
-    color:   '#ea580c',
-    bg:      'rgba(234,88,12,0.12)',
-    light:   'rgba(234,88,12,0.06)',
-    cssColor:'var(--island-sports-color)',
-    cssBg:   'var(--island-sports-bg)',
+    color:      '#ea580c',
+    bg:         'rgba(234,88,12,0.12)',
+    light:      'rgba(234,88,12,0.06)',
+    glow:       'rgba(234,88,12,0.25)',
+    cssColor:   'var(--island-sports-color)',
+    cssBg:      'var(--island-sports-bg)',
+    // IslandHeader-specific
+    modifier:   'sports',
+    eyebrow:    'Island · Active Community',
+    description:'Training, coaching & competition',
+    gradient:   'linear-gradient(135deg, #1a1006 0%, #2d1a08 40%, #3d2010 70%, #1a1006 100%)',
+    accentLine: 'linear-gradient(90deg, #ea580c, #f97316, transparent)',
+    members:    '12.4k',
+    weekPosts:  '3.2k',
+    emoji:      '⚡',
+    icon:       'Zap',
   },
   Beauty: {
-    color:   '#a855f7',
-    bg:      'rgba(168,85,247,0.12)',
-    light:   'rgba(168,85,247,0.06)',
-    cssColor:'var(--island-beauty-color)',
-    cssBg:   'var(--island-beauty-bg)',
+    color:      '#a855f7',
+    bg:         'rgba(168,85,247,0.12)',
+    light:      'rgba(168,85,247,0.06)',
+    glow:       'rgba(168,85,247,0.25)',
+    cssColor:   'var(--island-beauty-color)',
+    cssBg:      'var(--island-beauty-bg)',
+    modifier:   'beauty',
+    eyebrow:    'Island · Creative Hub',
+    description:'Style, wellness & self-expression',
+    gradient:   'linear-gradient(135deg, #150a20 0%, #220e33 40%, #2d1040 70%, #150a20 100%)',
+    accentLine: 'linear-gradient(90deg, #a855f7, #c084fc, transparent)',
+    members:    '9.1k',
+    weekPosts:  '5.7k',
+    emoji:      '✨',
+    icon:       'Sparkles',
   },
   Education: {
-    color:   '#3b82f6',
-    bg:      'rgba(59,130,246,0.12)',
-    light:   'rgba(59,130,246,0.06)',
-    cssColor:'var(--island-education-color)',
-    cssBg:   'var(--island-education-bg)',
+    color:      '#3b82f6',
+    bg:         'rgba(59,130,246,0.12)',
+    light:      'rgba(59,130,246,0.06)',
+    glow:       'rgba(59,130,246,0.25)',
+    cssColor:   'var(--island-education-color)',
+    cssBg:      'var(--island-education-bg)',
+    modifier:   'education',
+    eyebrow:    'Island · Knowledge Network',
+    description:'Learning, teaching & growth',
+    gradient:   'linear-gradient(135deg, #080e1f 0%, #0e1a33 40%, #122040 70%, #080e1f 100%)',
+    accentLine: 'linear-gradient(90deg, #3b82f6, #60a5fa, transparent)',
+    members:    '7.8k',
+    weekPosts:  '2.1k',
+    emoji:      '📚',
+    icon:       'BookOpen',
   },
 };
 
 // ─── Gig Registry ─────────────────────────────────────────────────────────────
-// Used by: App.jsx (Marketplace Grid), GlobalSearch.jsx (Trending Gigs)
 export const GIGS = [
   {
     id:           'gig-001',
@@ -118,7 +148,6 @@ export const GIGS = [
 ];
 
 // ─── Derived: Trending Gigs for GlobalSearch ──────────────────────────────────
-// Enriches the GIGS registry with display-ready search fields.
 export const TRENDING_GIGS = GIGS
   .filter(g => g.trending)
   .map(g => ({
@@ -133,8 +162,9 @@ export const TRENDING_GIGS = GIGS
   }));
 
 // ─── Community Posts ──────────────────────────────────────────────────────────
-// Used by: Feed.jsx
+// Used by: Feed.jsx — filtered reactively by activeIsland + searchQuery
 export const POSTS = [
+  // ── Education island ────────────────────────────────────────────────────────
   {
     id:         1,
     author:     'Wanjiku M.',
@@ -149,6 +179,34 @@ export const POSTS = [
     avatarGrad: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
   },
   {
+    id:         4,
+    author:     'Njeri W.',
+    authorXP:   980,
+    island:     'Education',
+    time:       '45m ago',
+    content:    'New study circle forming for KCSE Mathematics revision — online sessions every Saturday 10AM. Open to all levels. Drop a 📚 in the comments if you\'re in!',
+    likes:      31,
+    comments:   18,
+    reposts:    9,
+    avatar:     'N',
+    avatarGrad: 'linear-gradient(135deg, #22c55e, #3b82f6)',
+  },
+  {
+    id:         5,
+    author:     'Prof. Kamau',
+    authorXP:   6800,
+    island:     'Education',
+    time:       '3h ago',
+    content:    'Curriculum tip: Spaced repetition beats cramming 5-to-1 for long-term retention. I\'ve built a free Anki deck for the new CBC Science syllabus — link in my profile. 🧠',
+    likes:      187,
+    comments:   44,
+    reposts:    72,
+    avatar:     'P',
+    avatarGrad: 'linear-gradient(135deg, #60a5fa, #34d399)',
+    isThread:   false,
+  },
+  // ── Sports island ────────────────────────────────────────────────────────────
+  {
     id:         2,
     author:     'Omondi K.',
     authorXP:   720,
@@ -161,6 +219,34 @@ export const POSTS = [
     avatar:     'O',
     avatarGrad: 'linear-gradient(135deg, #ea580c, #facc15)',
   },
+  {
+    id:         6,
+    author:     'Otieno K.',
+    authorXP:   3100,
+    island:     'Sports',
+    time:       '2h ago',
+    content:    'Match recap: Nairobi FC vs Rift Valley Rangers. Tactical breakdown thread 🧵\n\n1/ Their high press in the first 20 minutes completely disrupted our build-up play. Here\'s what we adapted at half-time.',
+    likes:      203,
+    comments:   58,
+    reposts:    41,
+    avatar:     'O',
+    avatarGrad: 'linear-gradient(135deg, #f97316, #ea580c)',
+    isThread:   true,
+  },
+  {
+    id:         7,
+    author:     'Fatuma A.',
+    authorXP:   1450,
+    island:     'Sports',
+    time:       '4h ago',
+    content:    'Completed my first 10K! 54 minutes. Six months ago I couldn\'t run 1K without stopping. This community kept me accountable every single week 🏃‍♀️🔥',
+    likes:      412,
+    comments:   97,
+    reposts:    63,
+    avatar:     'F',
+    avatarGrad: 'linear-gradient(135deg, #facc15, #f97316)',
+  },
+  // ── Beauty island ────────────────────────────────────────────────────────────
   {
     id:         3,
     author:     'Amina S.',
@@ -175,16 +261,148 @@ export const POSTS = [
     avatarGrad: 'linear-gradient(135deg, #a855f7, #ec4899)',
     isThread:   true,
   },
+  {
+    id:         8,
+    author:     'Zawadi J.',
+    authorXP:   890,
+    island:     'Beauty',
+    time:       '30m ago',
+    content:    'New product review: tried the Shea Radiance butter on my 4C hair — full honest breakdown with before/after in my gallery. TLDR: it passed the shrinkage test and the smell is divine 🌺',
+    likes:      156,
+    comments:   34,
+    reposts:    28,
+    avatar:     'Z',
+    avatarGrad: 'linear-gradient(135deg, #ec4899, #f43f5e)',
+  },
+  {
+    id:         9,
+    author:     'Wanjiku G.',
+    authorXP:   2200,
+    island:     'Beauty',
+    time:       '5h ago',
+    content:    'PSA for fellow stylists: the new Kenya Bureau of Standards guidelines on cosmetics labelling drop on June 1st. Make sure your product descriptions are updated — happy to walk anyone through what changed in my next Classroom session.',
+    likes:      98,
+    comments:   22,
+    reposts:    45,
+    avatar:     'W',
+    avatarGrad: 'linear-gradient(135deg, #c084fc, #a855f7)',
+  },
 ];
 
 // ─── Top Islanders ────────────────────────────────────────────────────────────
-// Used by: GlobalSearch.jsx
 export const TOP_ISLANDERS = [
   { id: 'u1', initials: 'A', name: 'Amina S.',   handle: '@aminas',   xpLabel: '5,500 XP', rank: '🌳 Canopy',   island: 'Beauty',    grad: 'linear-gradient(135deg,#a855f7,#ec4899)', islandColor: 'var(--island-beauty-color)'    },
   { id: 'u2', initials: 'O', name: 'Otieno K.',  handle: '@otienok',  xpLabel: '3,100 XP', rank: '🌿 Sprout',   island: 'Sports',    grad: 'linear-gradient(135deg,#ea580c,#facc15)', islandColor: 'var(--island-sports-color)'    },
   { id: 'u3', initials: 'W', name: 'Wanjiku M.', handle: '@wanjikum', xpLabel: '3,200 XP', rank: '🌿 Sprout',   island: 'Education', grad: 'linear-gradient(135deg,#3b82f6,#8b5cf6)', islandColor: 'var(--island-education-color)' },
   { id: 'u4', initials: 'N', name: 'Njeri W.',   handle: '@njeriw',   xpLabel: '980 XP',   rank: '🌱 Seedling', island: 'Education', grad: 'linear-gradient(135deg,#22c55e,#3b82f6)', islandColor: 'var(--island-education-color)' },
   { id: 'u5', initials: 'B', name: 'Brian O.',   handle: '@briano',   xpLabel: '650 XP',   rank: '🌱 Seedling', island: 'Sports',    grad: 'linear-gradient(135deg,#f97316,#ea580c)', islandColor: 'var(--island-sports-color)'    },
+];
+
+// ─── Lessons Registry ─────────────────────────────────────────────────────────
+// Used by: Classroom.jsx — addXP(lesson.xpReward) fires on completion
+export const LESSONS = [
+  // ── Education island ────────────────────────────────────────────────────────
+  {
+    id:        'lesson-edu-01',
+    island:    'Education',
+    title:     'CBC Curriculum Framework Overview',
+    duration:  '18 min',
+    xpReward:  40,
+    level:     'Beginner',
+    thumbnail: '📐',
+    instructor:'Prof. Kamau',
+    description: 'A comprehensive walkthrough of the new Competency-Based Curriculum structure, assessment philosophy, and key differences from the 8-4-4 system.',
+  },
+  {
+    id:        'lesson-edu-02',
+    island:    'Education',
+    title:     'Spaced Repetition & Active Recall',
+    duration:  '22 min',
+    xpReward:  50,
+    level:     'Intermediate',
+    thumbnail: '🧠',
+    instructor:'Wanjiku M.',
+    description: 'Evidence-based study techniques that dramatically improve long-term retention. Includes practical setup for Anki flashcard decks.',
+  },
+  {
+    id:        'lesson-edu-03',
+    island:    'Education',
+    title:     'Building a Tutoring Business',
+    duration:  '35 min',
+    xpReward:  75,
+    level:     'Advanced',
+    thumbnail: '💼',
+    instructor:'Njeri W.',
+    description: 'From pricing your sessions and finding clients on Chronicles to scheduling, payments, and growing word-of-mouth referrals.',
+  },
+  // ── Sports island ────────────────────────────────────────────────────────────
+  {
+    id:        'lesson-spt-01',
+    island:    'Sports',
+    title:     'Fundamentals of High-Intensity Training',
+    duration:  '20 min',
+    xpReward:  45,
+    level:     'Beginner',
+    thumbnail: '🏋️',
+    instructor:'Omondi K.',
+    description: 'Safe programming principles for HIIT sessions — warm-up protocols, work:rest ratios, and knowing when to push vs. recover.',
+  },
+  {
+    id:        'lesson-spt-02',
+    island:    'Sports',
+    title:     'Tactical Pressing & Defensive Shape',
+    duration:  '28 min',
+    xpReward:  60,
+    level:     'Intermediate',
+    thumbnail: '⚽',
+    instructor:'Otieno K.',
+    description: 'Video-style breakdown of pressing triggers, defensive line positioning, and how to coach these patterns with grassroots teams.',
+  },
+  {
+    id:        'lesson-spt-03',
+    island:    'Sports',
+    title:     'Nutrition for Endurance Athletes',
+    duration:  '32 min',
+    xpReward:  70,
+    level:     'Intermediate',
+    thumbnail: '🥗',
+    instructor:'Fatuma A.',
+    description: 'Fuelling strategies for long-distance running in East African heat — carb timing, hydration, and local food sources that perform.',
+  },
+  // ── Beauty island ────────────────────────────────────────────────────────────
+  {
+    id:        'lesson-bty-01',
+    island:    'Beauty',
+    title:     'Protective Styles for 4C Hair',
+    duration:  '25 min',
+    xpReward:  50,
+    level:     'Beginner',
+    thumbnail: '💆',
+    instructor:'Zawadi J.',
+    description: 'Box braids, twists, and cornrows — proper tension management, moisturising under the style, and avoiding breakage at the edges.',
+  },
+  {
+    id:        'lesson-bty-02',
+    island:    'Beauty',
+    title:     'Colour Theory for Dark Skin Tones',
+    duration:  '30 min',
+    xpReward:  65,
+    level:     'Intermediate',
+    thumbnail: '🎨',
+    instructor:'Amina S.',
+    description: 'Understanding undertones, complementary palettes, and building a look that pops — makeup and fashion applications both covered.',
+  },
+  {
+    id:        'lesson-bty-03',
+    island:    'Beauty',
+    title:     'Running a Compliant Beauty Business',
+    duration:  '40 min',
+    xpReward:  80,
+    level:     'Advanced',
+    thumbnail: '📋',
+    instructor:'Wanjiku G.',
+    description: 'KEBS labelling requirements, product liability basics, and structuring your service menu for maximum profit and client retention.',
+  },
 ];
 
 // ─── GIG_DETAILS — extended data for ServiceDetails.jsx ──────────────────────
@@ -204,9 +422,9 @@ export const GIG_DETAILS = {
       { name: 'Premium',  price: 12000, delivery: 7, desc: 'Everything + rush priority' },
     ],
     reviews: [
-      { author: 'M. Kariuki', rating: 5, text: 'Exceptional quality. Delivered ahead of schedule and went above and beyond with extras.', time: '2 days ago' },
-      { author: 'S. Otieno',  rating: 5, text: 'Professional, fast, and communicative throughout. Will definitely rebook.', time: '1 week ago' },
-      { author: 'P. Mwangi',  rating: 4, text: 'Great work overall. Minor tweaks needed but handled quickly.', time: '2 weeks ago' },
+      { author: 'M. Kariuki', rating: 5, text: 'Exceptional quality. Delivered ahead of schedule and went above and beyond with extras.',   time: '2 days ago'  },
+      { author: 'S. Otieno',  rating: 5, text: 'Professional, fast, and communicative throughout. Will definitely rebook.',                 time: '1 week ago'  },
+      { author: 'P. Mwangi',  rating: 4, text: 'Great work overall. Minor tweaks needed but handled quickly.',                              time: '2 weeks ago' },
     ],
   },
 };

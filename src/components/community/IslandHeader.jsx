@@ -1,114 +1,122 @@
-import { Zap, Sparkles, BookOpen, Users, TrendingUp } from 'lucide-react';
+import { Zap, Sparkles, BookOpen } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import useStore from '../../store/useStore';
+import { ISLAND_META } from '../../data/registry';
 
-// ─── Island configuration ─────────────────────────────────────────────────────
-const ISLAND_CONFIG = {
-  Sports: {
-    modifier:    'sports',
-    Icon:        Zap,
-    emoji:       '⚡',
-    eyebrow:     'Island · Active Community',
-    description: 'Training, coaching & competition',
-    color:       'var(--island-sports-color)',
-    bg:          'var(--island-sports-bg)',
-    glow:        'var(--island-sports-glow)',
-    gradient:    'linear-gradient(135deg, #1a1006 0%, #2d1a08 40%, #3d2010 70%, #1a1006 100%)',
-    accentLine:  'linear-gradient(90deg, #ea580c, #f97316, transparent)',
-    members:     '12.4k',
-    posts:       '3.2k',
-  },
-  Beauty: {
-    modifier:    'beauty',
-    Icon:        Sparkles,
-    emoji:       '✨',
-    eyebrow:     'Island · Creative Hub',
-    description: 'Style, wellness & self-expression',
-    color:       'var(--island-beauty-color)',
-    bg:          'var(--island-beauty-bg)',
-    glow:        'var(--island-beauty-glow)',
-    gradient:    'linear-gradient(135deg, #150a20 0%, #220e33 40%, #2d1040 70%, #150a20 100%)',
-    accentLine:  'linear-gradient(90deg, #a855f7, #c084fc, transparent)',
-    members:     '9.1k',
-    posts:       '5.7k',
-  },
-  Education: {
-    modifier:    'education',
-    Icon:        BookOpen,
-    emoji:       '📚',
-    eyebrow:     'Island · Knowledge Network',
-    description: 'Learning, teaching & growth',
-    color:       'var(--island-education-color)',
-    bg:          'var(--island-education-bg)',
-    glow:        'var(--island-education-glow)',
-    gradient:    'linear-gradient(135deg, #080e1f 0%, #0e1a33 40%, #122040 70%, #080e1f 100%)',
-    accentLine:  'linear-gradient(90deg, #3b82f6, #60a5fa, transparent)',
-    members:     '7.8k',
-    posts:       '2.1k',
-  },
-};
-
-const FALLBACK = ISLAND_CONFIG.Sports;
+// ─── Icon map (ISLAND_META stores icon name as string to avoid circular deps) ──
+const ICON_MAP = { Zap, Sparkles, BookOpen };
 
 // ─── Component ────────────────────────────────────────────────────────────────
-export default function IslandHeader({ island = 'Sports' }) {
-  const cfg = ISLAND_CONFIG[island] ?? FALLBACK;
-  const { Icon, modifier, eyebrow, color, bg, gradient, accentLine, members, posts } = cfg;
+// No props required — island is read directly from the store so this component
+// stays in sync with any navigation event that calls setActiveIsland().
+export default function IslandHeader() {
+  const { activeIsland } = useStore();
+
+  const cfg  = ISLAND_META[activeIsland] ?? ISLAND_META.Sports;
+  const Icon = ICON_MAP[cfg.icon] ?? Zap;
+
+  const {
+    modifier, eyebrow, color, bg, gradient,
+    accentLine, members, weekPosts, emoji,
+  } = cfg;
 
   return (
-    <div className={`island-header island-header--${modifier}`}>
-      {/* Layered background */}
-      <div
-        className="island-header__bg"
-        style={{ background: gradient }}
-      />
+    // AnimatePresence + key on the island name means the whole banner
+    // cross-fades whenever the user switches islands via the sidebar.
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={activeIsland}
+        className={`island-header island-header--${modifier}`}
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 8 }}
+        transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+      >
+        {/* ── Layered background ── */}
+        <div className="island-header__bg" style={{ background: gradient }} />
+        <div className="island-header__noise" />
 
-      {/* Subtle noise texture */}
-      <div className="island-header__noise" />
+        {/* ── Bottom accent glow line — colour changes with island ── */}
+        <motion.div
+          key={`line-${activeIsland}`}
+          initial={{ scaleX: 0, opacity: 0 }}
+          animate={{ scaleX: 1, opacity: 0.6 }}
+          transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
+          style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0, height: 2,
+            background: accentLine, zIndex: 2,
+            transformOrigin: 'left center',
+          }}
+        />
 
-      {/* Bottom accent glow line */}
-      <div style={{
-        position: 'absolute', bottom: 0, left: 0, right: 0, height: 2,
-        background: accentLine, zIndex: 2, opacity: 0.6,
-      }} />
+        {/* ── Corner glow orb ── */}
+        <div style={{
+          position: 'absolute', top: -20, right: -20, width: 140, height: 140,
+          borderRadius: '50%',
+          background: `radial-gradient(circle, ${color}1a 0%, transparent 70%)`,
+          zIndex: 1,
+          transition: 'background 0.4s ease',
+        }} />
 
-      {/* Corner geometric detail */}
-      <div style={{
-        position: 'absolute', top: -20, right: -20, width: 140, height: 140,
-        borderRadius: '50%',
-        background: `radial-gradient(circle, ${color}18 0%, transparent 70%)`,
-        zIndex: 1,
-      }} />
+        {/* ── Gradient overlay ── */}
+        <div className="island-header__overlay" />
 
-      {/* Gradient overlay */}
-      <div className="island-header__overlay" />
+        {/* ── Content row ── */}
+        <div className="island-header__content">
+          <motion.div
+            key={`icon-${activeIsland}`}
+            className="island-header__icon-wrap"
+            initial={{ scale: 0.7, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.3, ease: [0.34, 1.56, 0.64, 1], delay: 0.08 }}
+          >
+            <Icon size={22} style={{ color }} />
+          </motion.div>
 
-      {/* Content */}
-      <div className="island-header__content">
-        <div className="island-header__icon-wrap">
-          <Icon size={22} style={{ color }} />
-        </div>
+          <div className="island-header__meta">
+            <motion.div
+              key={`eyebrow-${activeIsland}`}
+              className="island-header__eyebrow"
+              style={{ color }}
+              initial={{ opacity: 0, x: -6 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.25, delay: 0.1 }}
+            >
+              {eyebrow}
+            </motion.div>
 
-        <div className="island-header__meta">
-          <div className="island-header__eyebrow" style={{ color }}>
-            {eyebrow}
+            <motion.h2
+              key={`title-${activeIsland}`}
+              className="island-header__title"
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1], delay: 0.12 }}
+            >
+              {activeIsland}
+            </motion.h2>
+
+            <div className="island-header__stats">
+              <span className="island-header__stat">
+                <strong>{members}</strong> members
+              </span>
+              <span className="island-header__stat">
+                <strong>{weekPosts}</strong> posts this week
+              </span>
+            </div>
           </div>
-          <h2 className="island-header__title">{island}</h2>
-          <div className="island-header__stats">
-            <span className="island-header__stat">
-              <strong>{members}</strong> members
-            </span>
-            <span className="island-header__stat">
-              <strong>{posts}</strong> posts this week
-            </span>
-          </div>
-        </div>
 
-        <span
-          className="island-header__pill"
-          style={{ color, background: bg }}
-        >
-          {cfg.emoji} {island}
-        </span>
-      </div>
-    </div>
+          <motion.span
+            key={`pill-${activeIsland}`}
+            className="island-header__pill"
+            style={{ color, background: bg }}
+            initial={{ opacity: 0, scale: 0.85 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.28, ease: [0.34, 1.56, 0.64, 1], delay: 0.15 }}
+          >
+            {emoji} {activeIsland}
+          </motion.span>
+        </div>
+      </motion.div>
+    </AnimatePresence>
   );
 }

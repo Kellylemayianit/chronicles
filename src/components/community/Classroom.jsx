@@ -1,483 +1,565 @@
 import { useState, useRef } from 'react';
-import useStore from '../../store/useStore';
-import useGamification from '../../hooks/useGamification';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Play, CheckCircle, Lock, Clock, Zap,
+  Sparkles, BookOpen, Award, ChevronRight, X,
+} from 'lucide-react';
+import useStore, { getRank } from '../../store/useStore';
+import { LESSONS, ISLAND_META } from '../../data/registry';
 
-// ─── Course data ───────────────────────────────────────────────────────────────
-const COURSE = {
-  id: 'course-kcse-math',
-  title: 'KCSE Mathematics — Complete Syllabus Mastery',
-  instructor: 'Wanjiku M.',
-  instructorXP: 3200,
-  instructorRole: 'Certified KCSE Tutor · 8 years experience',
-  totalLessons: 12,
-  totalDuration: '6h 40m',
-  island: 'Education',
-  sections: [
-    {
-      id: 's1',
-      title: 'Algebra & Quadratics',
-      lessons: [
-        { id: 'l1', title: 'Introduction & Course Overview', duration: '8:24', free: true, completed: true },
-        { id: 'l2', title: 'Solving Quadratic Equations', duration: '22:15', completed: true },
-        { id: 'l3', title: 'Factorisation Techniques', duration: '18:40', completed: true },
-        { id: 'l4', title: 'Practice & Past Paper Review', duration: '31:00', completed: false },
-      ],
-    },
-    {
-      id: 's2',
-      title: 'Geometry & Trigonometry',
-      lessons: [
-        { id: 'l5', title: 'Sine, Cosine & Tangent Rules', duration: '25:50', completed: false },
-        { id: 'l6', title: 'Circle Theorems (Full Guide)', duration: '34:10', completed: false },
-        { id: 'l7', title: 'Area & Volume Calculations', duration: '28:00', completed: false },
-      ],
-    },
-    {
-      id: 's3',
-      title: 'Statistics & Probability',
-      lessons: [
-        { id: 'l8', title: 'Mean, Median & Mode', duration: '20:30', completed: false },
-        { id: 'l9', title: 'Probability Trees & Events', duration: '24:45', completed: false },
-        { id: 'l10', title: 'Data Representation & Graphs', duration: '19:20', completed: false },
-      ],
-    },
-    {
-      id: 's4',
-      title: 'Exam Strategy & Mock Tests',
-      lessons: [
-        { id: 'l11', title: 'Time Management in Exams', duration: '15:00', completed: false },
-        { id: 'l12', title: 'Full Mock Paper Walkthrough', duration: '62:30', completed: false },
-      ],
-    },
-  ],
+// ─── Icon map ─────────────────────────────────────────────────────────────────
+const ICON_MAP = { Zap, Sparkles, BookOpen };
+
+// ─── Level badge ─────────────────────────────────────────────────────────────
+const LEVEL_STYLES = {
+  Beginner:     { color: '#52b788', bg: 'rgba(82,183,136,0.12)'   },
+  Intermediate: { color: '#f59e0b', bg: 'rgba(245,158,11,0.12)'   },
+  Advanced:     { color: '#ef4444', bg: 'rgba(239,68,68,0.12)'    },
 };
 
-// Flatten all lessons for navigation
-const ALL_LESSONS = COURSE.sections.flatMap(s => s.lessons);
+// ─── Lesson card variants ─────────────────────────────────────────────────────
+const cardVariants = {
+  hidden:  { opacity: 0, y: 16 },
+  visible: (i) => ({
+    opacity: 1, y: 0,
+    transition: { delay: i * 0.07, duration: 0.32, ease: [0.16, 1, 0.3, 1] },
+  }),
+  exit: { opacity: 0, scale: 0.96, transition: { duration: 0.15 } },
+};
 
-// ─── Lesson Item ───────────────────────────────────────────────────────────────
-function LessonItem({ lesson, isActive, onSelect, sectionColor }) {
+// ─── XP Toast ─────────────────────────────────────────────────────────────────
+function XPToast({ amount, rank, onDone }) {
   return (
-    <div
-      onClick={() => onSelect(lesson)}
+    <motion.div
+      initial={{ opacity: 0, y: 24, scale: 0.85 }}
+      animate={{ opacity: 1, y: 0,  scale: 1 }}
+      exit={{ opacity: 0, y: -20, scale: 0.9 }}
+      transition={{ duration: 0.38, ease: [0.34, 1.56, 0.64, 1] }}
+      onAnimationComplete={() => setTimeout(onDone, 1800)}
       style={{
-        display: 'flex', alignItems: 'center', gap: 10,
-        padding: '9px 12px 9px 16px',
-        borderRadius: 8, cursor: 'pointer',
-        background: isActive ? 'rgba(82,183,136,0.1)' : 'transparent',
-        border: isActive ? '1px solid rgba(82,183,136,0.2)' : '1px solid transparent',
-        transition: 'all 0.12s',
-        marginBottom: 2,
+        position: 'fixed', bottom: 32, left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 500,
+        background: 'rgba(14,24,18,0.96)',
+        border: `1px solid ${rank.color}55`,
+        borderRadius: 24,
+        padding: '12px 24px',
+        display: 'flex', alignItems: 'center', gap: 12,
+        boxShadow: `0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px ${rank.color}22`,
+        backdropFilter: 'blur(16px)',
+        whiteSpace: 'nowrap',
       }}
-      onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
-      onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
     >
-      {/* Status icon */}
-      <div style={{
-        width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
-        background: lesson.completed ? 'rgba(82,183,136,0.2)' : isActive ? 'rgba(82,183,136,0.1)' : 'rgba(255,255,255,0.06)',
-        border: `1.5px solid ${lesson.completed ? '#52b788' : isActive ? '#52b78855' : 'rgba(255,255,255,0.08)'}`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 10,
-      }}>
-        {lesson.completed ? <span style={{ color: '#52b788' }}>✓</span> : isActive ? <span style={{ color: '#52b788', fontSize: 8 }}>▶</span> : null}
-      </div>
-
-      {/* Lesson info */}
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <span style={{ fontSize: 22 }}>🎉</span>
+      <div>
         <div style={{
-          fontSize: '0.8rem', fontWeight: isActive ? 700 : 500,
-          color: isActive ? '#e8f0eb' : lesson.completed ? '#a3b899' : '#7a9282',
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          lineHeight: 1.35,
+          fontFamily: 'var(--font-display,"Playfair Display",serif)',
+          fontSize: '1rem', fontWeight: 800, color: '#e0eadd',
         }}>
-          {lesson.title}
+          Lesson Complete!
         </div>
-        <div style={{ fontSize: '0.65rem', color: '#5a7260', marginTop: 1 }}>
-          {lesson.free && <span style={{ color: '#52b788', fontWeight: 700, marginRight: 5 }}>FREE</span>}
-          {lesson.duration}
+        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+          <span style={{ color: rank.color, fontWeight: 700 }}>+{amount} XP</span>
+          {' '}added to your profile
         </div>
       </div>
-
-      {/* Lock icon for non-completed non-active future lessons */}
-      {!lesson.completed && !isActive && !lesson.free && (
-        <span style={{ fontSize: 11, color: '#3a4e40', flexShrink: 0 }}>🔒</span>
-      )}
-    </div>
+      <div style={{
+        padding: '4px 12px', borderRadius: 20,
+        background: rank.color + '18', color: rank.color,
+        fontSize: '0.78rem', fontWeight: 700,
+        border: `1px solid ${rank.color}33`,
+      }}>
+        {rank.icon} {rank.name}
+      </div>
+    </motion.div>
   );
 }
 
-// ─── Video Player (mock) ───────────────────────────────────────────────────────
-function VideoPlayer({ lesson, onComplete, onNext }) {
-  const [playing, setPlaying] = useState(false);
-  const [progress, setProgress] = useState(lesson.completed ? 100 : 0);
-  const [speed, setSpeed] = useState(1);
+// ─── Lesson Player Modal ───────────────────────────────────────────────────────
+function LessonPlayer({ lesson, accent, onClose, onComplete, isCompleted }) {
+  const [progress, setProgress] = useState(0);
+  const [playing,  setPlaying]  = useState(false);
   const intervalRef = useRef(null);
 
   const handlePlay = () => {
+    if (isCompleted || playing) return;
     setPlaying(true);
+
+    // Simulate lesson progress — 100 steps over 3 seconds for demo
     intervalRef.current = setInterval(() => {
       setProgress(p => {
-        if (p >= 100) {
+        const next = p + 2;
+        if (next >= 100) {
           clearInterval(intervalRef.current);
           setPlaying(false);
-          onComplete(lesson.id);
+          // Give React one frame before calling complete
+          setTimeout(() => onComplete(lesson), 60);
           return 100;
         }
-        return p + 0.5;
+        return next;
       });
-    }, 80);
-  };
-  const handlePause = () => {
-    setPlaying(false);
-    clearInterval(intervalRef.current);
+    }, 60);
   };
 
-  const formatTime = (pct) => {
-    const [mins, secs] = lesson.duration.split(':').map(Number);
-    const total = mins * 60 + secs;
-    const current = Math.floor((pct / 100) * total);
-    return `${Math.floor(current / 60)}:${String(current % 60).padStart(2, '0')}`;
+  const handleClose = () => {
+    clearInterval(intervalRef.current);
+    onClose();
   };
 
   return (
-    <div style={playerStyles.container}>
-      {/* Video area */}
-      <div style={playerStyles.videoArea}>
-        <div style={playerStyles.videoGrad} />
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 400,
+        background: 'rgba(5,12,8,0.82)',
+        backdropFilter: 'blur(10px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 20,
+      }}
+      onClick={handleClose}
+    >
+      <motion.div
+        initial={{ scale: 0.92, y: 20, opacity: 0 }}
+        animate={{ scale: 1, y: 0, opacity: 1 }}
+        exit={{ scale: 0.94, opacity: 0 }}
+        transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: '100%', maxWidth: 520,
+          background: 'var(--sidebar-bg)',
+          border: `1px solid ${accent.color}33`,
+          borderRadius: 20,
+          overflow: 'hidden',
+          boxShadow: `0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px ${accent.color}18`,
+        }}
+      >
+        {/* Top accent strip */}
+        <div style={{ height: 3, background: `linear-gradient(90deg, ${accent.color}, ${accent.color}55, transparent)` }} />
 
-        {/* Overlay controls */}
-        <div style={playerStyles.playOverlay}>
-          <button
-            onClick={playing ? handlePause : handlePlay}
-            style={playerStyles.bigPlayBtn}
-            onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.08)'}
-            onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
-          >
-            {playing ? '⏸' : progress === 100 ? '↺' : '▶'}
+        {/* Header */}
+        <div style={{ padding: '20px 22px 16px', display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+          <div style={{
+            width: 56, height: 56, borderRadius: 14, flexShrink: 0,
+            background: accent.bg,
+            border: `1px solid ${accent.color}33`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 26,
+          }}>
+            {lesson.thumbnail}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{
+              fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em',
+              textTransform: 'uppercase', color: accent.color, marginBottom: 4,
+            }}>
+              {lesson.island} · {lesson.level}
+            </div>
+            <h3 style={{
+              fontFamily: 'var(--font-display,"Playfair Display",serif)',
+              fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)',
+              lineHeight: 1.3,
+            }}>
+              {lesson.title}
+            </h3>
+            <div style={{ display: 'flex', gap: 12, marginTop: 5, alignItems: 'center' }}>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                <Clock size={10} style={{ display: 'inline', marginRight: 4 }} />
+                {lesson.duration}
+              </span>
+              <span style={{
+                fontSize: '0.72rem', fontWeight: 700,
+                color: '#f59e0b', background: 'rgba(245,158,11,0.1)',
+                padding: '1px 7px', borderRadius: 10,
+              }}>
+                +{lesson.xpReward} XP
+              </span>
+            </div>
+          </div>
+          <button onClick={handleClose} style={{
+            background: 'rgba(255,255,255,0.06)', border: 'none',
+            borderRadius: '50%', width: 28, height: 28,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', color: 'var(--text-muted)', flexShrink: 0,
+          }}>
+            <X size={13} />
           </button>
         </div>
 
-        {/* Lesson title overlay */}
-        <div style={playerStyles.titleOverlay}>
-          <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}>NOW PLAYING</div>
-          <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#fff', lineHeight: 1.3 }}>{lesson.title}</div>
+        {/* Description */}
+        <div style={{ padding: '0 22px 16px' }}>
+          <p style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', lineHeight: 1.65 }}>
+            {lesson.description}
+          </p>
+          <div style={{ marginTop: 10, fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+            Instructor: <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{lesson.instructor}</span>
+          </div>
         </div>
 
         {/* Progress bar */}
-        <div style={playerStyles.progressWrap}>
-          <div style={{ ...playerStyles.progressFill, width: `${progress}%`, background: progress === 100 ? '#52b788' : 'linear-gradient(90deg, #52b788, #f59e0b)' }} />
+        <div style={{ padding: '0 22px 20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+            <span>{isCompleted ? 'Completed' : playing ? 'In progress…' : 'Ready to start'}</span>
+            <span style={{ color: accent.color, fontWeight: 700 }}>{isCompleted ? 100 : progress}%</span>
+          </div>
+          <div style={{
+            height: 6, background: 'rgba(255,255,255,0.07)',
+            borderRadius: 8, overflow: 'hidden',
+          }}>
+            <motion.div
+              animate={{ width: `${isCompleted ? 100 : progress}%` }}
+              transition={{ duration: 0.1 }}
+              style={{
+                height: '100%', borderRadius: 8,
+                background: `linear-gradient(90deg, ${accent.color}, var(--accent-2))`,
+              }}
+            />
+          </div>
         </div>
-      </div>
 
-      {/* Controls bar */}
-      <div style={playerStyles.controlsBar}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button onClick={playing ? handlePause : handlePlay} style={playerStyles.ctrlBtn}>
-            {playing ? '⏸️' : '▶️'}
-          </button>
-          <span style={{ fontSize: '0.8rem', color: '#a3b899', fontFamily: 'monospace' }}>
-            {formatTime(progress)} / {lesson.duration}
-          </span>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {[0.75, 1, 1.25, 1.5].map(s => (
-            <button key={s} onClick={() => setSpeed(s)} style={{
-              background: speed === s ? 'rgba(82,183,136,0.15)' : 'none',
-              border: speed === s ? '1px solid rgba(82,183,136,0.3)' : '1px solid transparent',
-              borderRadius: 6, padding: '3px 8px', cursor: 'pointer',
-              fontSize: '0.72rem', fontWeight: speed === s ? 700 : 500,
-              color: speed === s ? '#52b788' : '#5a7260',
-            }}>{s}x</button>
-          ))}
-          <button onClick={onNext} style={{ ...playerStyles.ctrlBtn, marginLeft: 4 }} title="Next lesson">⏭️</button>
-          {progress === 100 && !lesson.completed && (
-            <button onClick={() => onComplete(lesson.id)} style={playerStyles.markDoneBtn}>
-              Mark Complete ✓
+        {/* CTA */}
+        <div style={{
+          padding: '14px 22px',
+          borderTop: '1px solid var(--border)',
+          display: 'flex', gap: 10,
+        }}>
+          {isCompleted ? (
+            <div style={{
+              flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              gap: 8, padding: '10px', borderRadius: 24,
+              background: 'rgba(82,183,136,0.08)',
+              border: '1px solid rgba(82,183,136,0.2)',
+              color: '#52b788', fontSize: '0.88rem', fontWeight: 700,
+            }}>
+              <CheckCircle size={15} /> Lesson Complete
+            </div>
+          ) : (
+            <button
+              onClick={handlePlay}
+              disabled={playing}
+              style={{
+                flex: 1, padding: '11px',
+                borderRadius: 24, border: 'none',
+                background: playing
+                  ? 'rgba(255,255,255,0.05)'
+                  : `linear-gradient(135deg, ${accent.color}, ${accent.color}bb)`,
+                color: '#fff', fontSize: '0.9rem', fontWeight: 700,
+                cursor: playing ? 'default' : 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                boxShadow: playing ? 'none' : `0 4px 18px ${accent.color}33`,
+                transition: 'all 0.2s',
+              }}
+            >
+              {playing ? (
+                <>
+                  <span style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }}>⚙️</span>
+                  Playing…
+                </>
+              ) : (
+                <><Play size={15} fill="currentColor" /> Start Lesson</>
+              )}
             </button>
           )}
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
-// ─── Main Classroom ────────────────────────────────────────────────────────────
+// ─── Classroom ────────────────────────────────────────────────────────────────
 export default function Classroom() {
-  const { activeIsland } = useStore();
-  const [activeLesson, setActiveLesson] = useState(ALL_LESSONS[3]); // first incomplete
-  const [completedIds, setCompletedIds] = useState(
-    new Set(ALL_LESSONS.filter(l => l.completed).map(l => l.id))
-  );
-  const [expandedSections, setExpandedSections] = useState(new Set(['s1', 's2']));
+  const { activeIsland, addXP, userStats } = useStore();
 
-  const { rank, progress: xpProgress } = useGamification(completedIds.size * 80 + 240);
-  const completedCount = completedIds.size;
-  const totalLessons = ALL_LESSONS.length;
-  const courseProgress = Math.round((completedCount / totalLessons) * 100);
+  const [completedIds, setCompletedIds] = useState(new Set());
+  const [activeLessonId, setActiveLessonId] = useState(null);
+  const [toast, setToast]   = useState(null); // { amount, rank }
 
-  const markComplete = (lessonId) => {
-    setCompletedIds(prev => new Set([...prev, lessonId]));
+  const accent      = ISLAND_META[activeIsland] ?? ISLAND_META.Sports;
+  const Icon        = ICON_MAP[accent.icon] ?? BookOpen;
+
+  // Filter lessons to the active island
+  const islandLessons = LESSONS.filter(l => l.island === activeIsland);
+  const activeLesson  = islandLessons.find(l => l.id === activeLessonId) ?? null;
+
+  const totalXP     = islandLessons.reduce((s, l) => s + l.xpReward, 0);
+  const earnedXP    = islandLessons
+    .filter(l => completedIds.has(l.id))
+    .reduce((s, l) => s + l.xpReward, 0);
+  const courseProgress = islandLessons.length
+    ? Math.round((completedIds.size / islandLessons.length) * 100)
+    : 0;
+
+  // Called by LessonPlayer when progress hits 100%
+  const handleComplete = (lesson) => {
+    if (completedIds.has(lesson.id)) return;
+
+    // Mark complete
+    setCompletedIds(prev => new Set([...prev, lesson.id]));
+
+    // Fire XP into the store — this immediately updates ProfileDrawer, header widget, sidebar
+    addXP(lesson.xpReward);
+
+    // Show toast with updated rank
+    const newXP   = userStats.xp + lesson.xpReward;
+    const newRank = getRank(newXP);
+    setToast({ amount: lesson.xpReward, rank: newRank });
+
+    // Close the player
+    setActiveLessonId(null);
   };
-
-  const goNext = () => {
-    const idx = ALL_LESSONS.findIndex(l => l.id === activeLesson.id);
-    if (idx < ALL_LESSONS.length - 1) setActiveLesson(ALL_LESSONS[idx + 1]);
-  };
-
-  const toggleSection = (sectionId) => {
-    setExpandedSections(prev => {
-      const next = new Set(prev);
-      next.has(sectionId) ? next.delete(sectionId) : next.add(sectionId);
-      return next;
-    });
-  };
-
-  const { rank: instructorRank } = useGamification(COURSE.instructorXP);
-
-  // Only render for Education island
-  if (activeIsland !== 'Education') {
-    return (
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12, color: '#5a7260' }}>
-        <div style={{ fontSize: 42 }}>📚</div>
-        <p style={{ fontSize: '0.9rem' }}>Switch to the <strong style={{ color: '#3b82f6' }}>Education</strong> island to access Classrooms.</p>
-      </div>
-    );
-  }
 
   return (
-    <div style={classroomStyles.root}>
+    <div style={{ maxWidth: 700, flex: 1 }}>
 
-      {/* ── Left: Video + Notes ── */}
-      <div style={classroomStyles.main}>
+      {/* ── Course Header ── */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeIsland}
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 8 }}
+          transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+          style={{
+            background: 'var(--card-bg)',
+            border: `1px solid ${accent.color}33`,
+            borderRadius: 16,
+            overflow: 'hidden',
+            marginBottom: 20,
+          }}
+        >
+          {/* Accent strip */}
+          <div style={{ height: 3, background: `linear-gradient(90deg, ${accent.color}, ${accent.color}44, transparent)` }} />
 
-        {/* Video player */}
-        <VideoPlayer
-          key={activeLesson.id}
-          lesson={{ ...activeLesson, completed: completedIds.has(activeLesson.id) }}
-          onComplete={markComplete}
-          onNext={goNext}
-        />
-
-        {/* Lesson metadata */}
-        <div style={{ padding: '20px 24px' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 18 }}>
-            <div>
-              <h2 style={{ fontFamily: 'var(--font-display,"Playfair Display",serif)', fontSize: '1.25rem', fontWeight: 700, color: '#e8f0eb', marginBottom: 6, lineHeight: 1.3 }}>
-                {activeLesson.title}
-              </h2>
-              <p style={{ fontSize: '0.82rem', color: '#5a7260' }}>
-                from <span style={{ color: '#3b82f6', fontWeight: 600 }}>{COURSE.title}</span>
-              </p>
-            </div>
-            {completedIds.has(activeLesson.id) && (
-              <div style={{ background: 'rgba(82,183,136,0.12)', border: '1px solid rgba(82,183,136,0.2)', borderRadius: 20, padding: '5px 14px', color: '#52b788', fontSize: '0.75rem', fontWeight: 700, flexShrink: 0 }}>
-                ✓ Completed
+          <div style={{ padding: '20px 24px' }}>
+            {/* Title row */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+              <div style={{
+                width: 44, height: 44, borderRadius: 12,
+                background: accent.bg, border: `1px solid ${accent.color}33`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Icon size={20} style={{ color: accent.color }} />
               </div>
-            )}
-          </div>
-
-          {/* Instructor */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: 'rgba(255,255,255,0.025)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
-            <div style={{ width: 42, height: 42, borderRadius: '50%', background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 800, color: '#fff', flexShrink: 0 }}>
-              {COURSE.instructor[0]}
-            </div>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#e8f0eb' }}>{COURSE.instructor}</span>
-                <span style={{ fontSize: '0.65rem', color: '#52b788' }}>✅ Verified</span>
-                <span style={{ fontSize: '0.65rem', fontWeight: 700, color: instructorRank.color, background: instructorRank.color + '1a', padding: '1px 7px', borderRadius: 20 }}>
-                  {instructorRank.icon} {instructorRank.name}
-                </span>
+              <div>
+                <div style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: accent.color, marginBottom: 2 }}>
+                  {activeIsland} Classroom
+                </div>
+                <h2 style={{ fontFamily: 'var(--font-display,"Playfair Display",serif)', fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                  {activeIsland} Mastery Track
+                </h2>
               </div>
-              <p style={{ fontSize: '0.75rem', color: '#5a7260', marginTop: 2 }}>{COURSE.instructorRole}</p>
+              <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginBottom: 2 }}>Track XP</div>
+                <div style={{ fontFamily: 'var(--font-display,"Playfair Display",serif)', fontSize: '1.1rem', fontWeight: 800, color: accent.color }}>
+                  {earnedXP} / {totalXP}
+                </div>
+              </div>
             </div>
-            <button style={{ marginLeft: 'auto', padding: '7px 16px', borderRadius: 20, border: '1px solid rgba(59,130,246,0.3)', background: 'rgba(59,130,246,0.08)', color: '#3b82f6', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
-              Message
-            </button>
-          </div>
-        </div>
-      </div>
 
-      {/* ── Right: Progress Sidebar ── */}
-      <aside style={classroomStyles.sidebar}>
-
-        {/* Course progress header */}
-        <div style={classroomStyles.progressHeader}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
-            <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#e8f0eb' }}>Course Progress</span>
-            <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#52b788' }}>{courseProgress}%</span>
-          </div>
-          <div style={{ height: 7, background: 'rgba(255,255,255,0.07)', borderRadius: 10, overflow: 'hidden', marginBottom: 8 }}>
-            <div style={{ height: '100%', borderRadius: 10, width: `${courseProgress}%`, background: 'linear-gradient(90deg, #52b788, #3b82f6)', transition: 'width 0.5s ease' }} />
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#5a7260' }}>
-            <span>{completedCount} of {totalLessons} lessons done</span>
-            <span>{COURSE.totalDuration}</span>
-          </div>
-        </div>
-
-        {/* XP rank bar */}
-        <div style={classroomStyles.rankCard}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-            <span style={{ fontSize: 20 }}>{rank.icon}</span>
-            <div>
-              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: rank.color }}>{rank.name}</div>
-              <div style={{ fontSize: '0.65rem', color: '#5a7260' }}>{completedIds.size * 80 + 240} XP earned</div>
+            {/* Course progress bar */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                {completedIds.size} / {islandLessons.length} lessons completed
+              </span>
+              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: accent.color }}>
+                {courseProgress}%
+              </span>
             </div>
-            <div style={{ marginLeft: 'auto', fontSize: '0.68rem', color: '#5a7260' }}>+80 XP/lesson</div>
+            <div style={{ height: 6, background: 'rgba(255,255,255,0.07)', borderRadius: 8, overflow: 'hidden' }}>
+              <motion.div
+                animate={{ width: `${courseProgress}%` }}
+                transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                style={{
+                  height: '100%', borderRadius: 8,
+                  background: `linear-gradient(90deg, ${accent.color}, var(--accent-2))`,
+                }}
+              />
+            </div>
           </div>
-          <div style={{ height: 5, background: 'rgba(255,255,255,0.07)', borderRadius: 10, overflow: 'hidden' }}>
-            <div style={{ height: '100%', borderRadius: 10, width: `${xpProgress}%`, background: `linear-gradient(90deg, ${rank.color}, #f59e0b)`, transition: 'width 0.5s ease' }} />
-          </div>
-        </div>
+        </motion.div>
+      </AnimatePresence>
 
-        {/* Divider */}
-        <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '4px 0 8px' }} />
-
-        {/* Lesson list */}
-        <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 16 }}>
-          {COURSE.sections.map((section, si) => {
-            const isExpanded = expandedSections.has(section.id);
-            const sectionCompleted = section.lessons.filter(l => completedIds.has(l.id)).length;
-            const sectionTotal = section.lessons.length;
-            const sectionDone = sectionCompleted === sectionTotal;
+      {/* ── Lesson List ── */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <AnimatePresence mode="popLayout">
+          {islandLessons.map((lesson, i) => {
+            const isDone   = completedIds.has(lesson.id);
+            const levelSty = LEVEL_STYLES[lesson.level] ?? LEVEL_STYLES.Beginner;
 
             return (
-              <div key={section.id} style={{ marginBottom: 4 }}>
-                {/* Section header */}
-                <button
-                  onClick={() => toggleSection(section.id)}
-                  style={{
-                    width: '100%', padding: '9px 12px',
-                    background: 'rgba(255,255,255,0.025)',
-                    border: 'none', borderRadius: 8,
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    cursor: 'pointer', marginBottom: isExpanded ? 4 : 0,
-                    transition: 'background 0.12s',
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.025)'}
-                >
-                  <span style={{ fontSize: 12, color: '#5a7260', transition: 'transform 0.2s', transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)', display: 'inline-block' }}>›</span>
-                  <span style={{ flex: 1, fontSize: '0.78rem', fontWeight: 700, color: '#a3b899', textAlign: 'left' }}>
-                    {section.title}
-                  </span>
-                  <span style={{ fontSize: '0.65rem', color: sectionDone ? '#52b788' : '#5a7260', fontWeight: 600 }}>
-                    {sectionCompleted}/{sectionTotal}
-                    {sectionDone && ' ✓'}
-                  </span>
-                </button>
+              <motion.div
+                key={lesson.id}
+                layout
+                custom={i}
+                variants={cardVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                onClick={() => setActiveLessonId(lesson.id)}
+                style={{
+                  background: isDone
+                    ? `${accent.color}09`
+                    : 'var(--card-bg)',
+                  border: `1px solid ${isDone ? accent.color + '30' : 'var(--border)'}`,
+                  borderRadius: 14,
+                  padding: '16px 18px',
+                  display: 'flex', alignItems: 'center', gap: 14,
+                  cursor: 'pointer',
+                  transition: 'border-color 0.2s, background 0.2s',
+                }}
+                onMouseEnter={e => {
+                  if (!isDone) e.currentTarget.style.background = 'var(--hover-bg)';
+                  e.currentTarget.style.borderColor = accent.color + '44';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = isDone ? `${accent.color}09` : 'var(--card-bg)';
+                  e.currentTarget.style.borderColor = isDone ? accent.color + '30' : 'var(--border)';
+                }}
+              >
+                {/* Thumbnail */}
+                <div style={{
+                  width: 48, height: 48, borderRadius: 12, flexShrink: 0,
+                  background: isDone ? `${accent.color}18` : accent.bg,
+                  border: `1px solid ${accent.color}22`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 22, position: 'relative',
+                }}>
+                  {lesson.thumbnail}
+                  {isDone && (
+                    <div style={{
+                      position: 'absolute', inset: 0, borderRadius: 12,
+                      background: `${accent.color}22`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <CheckCircle size={18} style={{ color: accent.color }} />
+                    </div>
+                  )}
+                </div>
 
-                {/* Lessons */}
-                {isExpanded && section.lessons.map(lesson => (
-                  <LessonItem
-                    key={lesson.id}
-                    lesson={{ ...lesson, completed: completedIds.has(lesson.id) }}
-                    isActive={activeLesson.id === lesson.id}
-                    onSelect={setActiveLesson}
-                    sectionColor='#3b82f6'
-                  />
-                ))}
-              </div>
+                {/* Info */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4, flexWrap: 'wrap' }}>
+                    <span style={{
+                      fontSize: '0.62rem', fontWeight: 700,
+                      color: levelSty.color, background: levelSty.bg,
+                      padding: '1px 7px', borderRadius: 10,
+                    }}>
+                      {lesson.level}
+                    </span>
+                    {isDone && (
+                      <span style={{
+                        fontSize: '0.62rem', fontWeight: 700,
+                        color: '#52b788', background: 'rgba(82,183,136,0.1)',
+                        padding: '1px 7px', borderRadius: 10,
+                        border: '1px solid rgba(82,183,136,0.2)',
+                      }}>
+                        ✓ Done
+                      </span>
+                    )}
+                  </div>
+                  <div style={{
+                    fontSize: '0.88rem', fontWeight: 600,
+                    color: isDone ? 'var(--text-secondary)' : 'var(--text-primary)',
+                    marginBottom: 4, lineHeight: 1.35,
+                  }}>
+                    {lesson.title}
+                  </div>
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                      <Clock size={10} style={{ display: 'inline', marginRight: 3 }} />
+                      {lesson.duration}
+                    </span>
+                    <span style={{
+                      fontSize: '0.72rem', fontWeight: 700,
+                      color: isDone ? 'var(--text-muted)' : '#f59e0b',
+                    }}>
+                      {isDone ? `+${lesson.xpReward} XP earned` : `+${lesson.xpReward} XP`}
+                    </span>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                      by {lesson.instructor}
+                    </span>
+                  </div>
+                </div>
+
+                {/* CTA / state icon */}
+                <div style={{ flexShrink: 0 }}>
+                  {isDone ? (
+                    <div style={{
+                      width: 32, height: 32, borderRadius: '50%',
+                      background: `${accent.color}18`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <Award size={15} style={{ color: accent.color }} />
+                    </div>
+                  ) : (
+                    <div style={{
+                      width: 32, height: 32, borderRadius: '50%',
+                      background: accent.bg,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      transition: 'background 0.15s',
+                    }}>
+                      <ChevronRight size={15} style={{ color: accent.color }} />
+                    </div>
+                  )}
+                </div>
+              </motion.div>
             );
           })}
-        </div>
+        </AnimatePresence>
+      </div>
 
-        {/* Certificate teaser */}
-        {courseProgress >= 80 && (
-          <div style={{ padding: '12px 14px', background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.15)', borderRadius: 10, margin: '8px 0 0' }}>
-            <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#f59e0b', marginBottom: 4 }}>🏅 Certificate Unlocking</div>
-            <div style={{ fontSize: '0.72rem', color: '#5a7260' }}>
-              Complete {totalLessons - completedCount} more lesson{totalLessons - completedCount !== 1 ? 's' : ''} to earn your Kimana Certificate.
-            </div>
+      {/* Course complete banner */}
+      {islandLessons.length > 0 && courseProgress === 100 && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          style={{
+            marginTop: 20, padding: '20px 24px',
+            background: `linear-gradient(135deg, ${accent.color}10, rgba(245,158,11,0.06))`,
+            border: `1px solid ${accent.color}33`,
+            borderRadius: 16, textAlign: 'center',
+          }}
+        >
+          <div style={{ fontSize: 36, marginBottom: 10 }}>🎓</div>
+          <div style={{ fontFamily: 'var(--font-display,"Playfair Display",serif)', fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: 6 }}>
+            {activeIsland} Mastery Complete!
           </div>
+          <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+            You've earned <strong style={{ color: accent.color }}>{earnedXP} XP</strong> from this track.
+          </div>
+        </motion.div>
+      )}
+
+      {/* ── Lesson Player Modal ── */}
+      <AnimatePresence>
+        {activeLesson && (
+          <LessonPlayer
+            key={activeLesson.id}
+            lesson={activeLesson}
+            accent={accent}
+            isCompleted={completedIds.has(activeLesson.id)}
+            onComplete={handleComplete}
+            onClose={() => setActiveLessonId(null)}
+          />
         )}
-      </aside>
+      </AnimatePresence>
+
+      {/* ── XP Toast ── */}
+      <AnimatePresence>
+        {toast && (
+          <XPToast
+            key="xp-toast"
+            amount={toast.amount}
+            rank={toast.rank}
+            onDone={() => setToast(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* spin keyframe for loading spinner */}
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
-
-const classroomStyles = {
-  root: {
-    display: 'flex', height: '100%', overflow: 'hidden',
-    background: '#0e1812',
-  },
-  main: {
-    flex: 1, overflowY: 'auto',
-    display: 'flex', flexDirection: 'column',
-    minWidth: 0,
-  },
-  sidebar: {
-    width: 300, flexShrink: 0,
-    background: '#0a1410',
-    borderLeft: '1px solid rgba(255,255,255,0.06)',
-    display: 'flex', flexDirection: 'column',
-    padding: '14px 12px 0',
-    overflow: 'hidden',
-  },
-  progressHeader: {
-    padding: '10px 4px 14px',
-    borderBottom: '1px solid rgba(255,255,255,0.06)',
-    marginBottom: 10, flexShrink: 0,
-  },
-  rankCard: {
-    background: 'rgba(82,183,136,0.06)', border: '1px solid rgba(82,183,136,0.1)',
-    borderRadius: 10, padding: '10px 12px', marginBottom: 10, flexShrink: 0,
-  },
-};
-
-const playerStyles = {
-  container: {
-    background: '#000', flexShrink: 0,
-  },
-  videoArea: {
-    position: 'relative',
-    paddingTop: '52%',
-    background: '#050e07',
-    overflow: 'hidden',
-  },
-  videoGrad: {
-    position: 'absolute', inset: 0,
-    background: 'radial-gradient(ellipse at 30% 40%, rgba(59,130,246,0.12) 0%, transparent 60%), radial-gradient(ellipse at 70% 60%, rgba(82,183,136,0.08) 0%, transparent 60%)',
-  },
-  playOverlay: {
-    position: 'absolute', inset: 0,
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-  },
-  bigPlayBtn: {
-    width: 64, height: 64, borderRadius: '50%',
-    background: 'rgba(82,183,136,0.2)',
-    border: '2px solid rgba(82,183,136,0.5)',
-    color: '#52b788', fontSize: 24,
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    cursor: 'pointer', backdropFilter: 'blur(8px)',
-    transition: 'transform 0.15s, background 0.15s',
-  },
-  titleOverlay: {
-    position: 'absolute', bottom: 32, left: 20, right: 20,
-  },
-  progressWrap: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    height: 4, background: 'rgba(255,255,255,0.1)',
-  },
-  progressFill: {
-    height: '100%', transition: 'width 0.1s linear',
-  },
-  controlsBar: {
-    padding: '10px 16px', background: '#080f0a',
-    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-    borderBottom: '1px solid rgba(255,255,255,0.06)',
-  },
-  ctrlBtn: {
-    background: 'none', border: 'none', cursor: 'pointer',
-    fontSize: 18, padding: '2px 4px',
-    display: 'flex', alignItems: 'center',
-  },
-  markDoneBtn: {
-    padding: '5px 14px', borderRadius: 20,
-    background: 'rgba(82,183,136,0.12)', border: '1px solid rgba(82,183,136,0.3)',
-    color: '#52b788', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer',
-  },
-};
